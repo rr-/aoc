@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+from pathlib import Path
+
+
+def part1(text):
+    return text.count("(") - text.count(")")
+
+
+def part2(text):
+    floor = 0
+    for pos, char in enumerate(Path("input.txt").read_text(), 1):
+        if char == "(":
+            floor += 1
+        elif char == ")":
+            floor -= 1
+        else:
+            raise AssertionError
+        if floor == -1:
+            return pos
+    return 0
+
+
+if __name__ == "__main__":
+    text = Path("input.txt").read_text().rstrip()
+    print(part1(text))
+    print(part2(text))
