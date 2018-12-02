@@ -13,7 +13,13 @@ def part1(word):
         if get_hash(word + str(i)).startswith("0" * 5):
             return i
 
+def part2(word):
+    for i in count(start=1):
+        if get_hash(word + str(i)).startswith("0" * 6):
+            return i
+
 
 if __name__ == "__main__":
     word = Path("input.txt").read_text().rstrip()
     print(part1(word))
+    print(part2(word))
