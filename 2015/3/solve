@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
+from PIL import Image
 
 
 def go(pos, char):
@@ -15,6 +16,18 @@ def go(pos, char):
     raise AssertionError
 
 
+def dump_grid(grid, path):
+    min_x = min(pos[0] for pos in grid.keys())
+    min_y = min(pos[1] for pos in grid.keys())
+    max_x = max(pos[0] for pos in grid.keys())
+    max_y = max(pos[1] for pos in grid.keys())
+    img = Image.new("RGB", (max_x + 1 - min_x, max_y + 1 - min_y), "black")
+    pixels = img.load()
+    for x, y in grid.keys():
+        pixels[x - min_x, y - min_y] = (255, 255, 255)
+    return img.save(str(path), format="png")
+
+
 def part1(chars):
     grid = defaultdict(int)
     pos = (0, 0)
@@ -22,6 +35,7 @@ def part1(chars):
     for char in chars:
         pos = go(pos, char)
         grid[pos] += 1
+    dump_grid(grid, 'part1.png')
     return sum(1 for pos in grid.keys() if grid[pos] >= 1)
 
 
@@ -36,6 +50,7 @@ def part2(chars):
         pos2 = go(pos2, char2)
         grid[pos1] += 1
         grid[pos2] += 1
+    dump_grid(grid, 'part2.png')
     return sum(1 for pos in grid.keys() if grid[pos] >= 1)
 
 
