@@ -3,35 +3,35 @@ import re
 from pathlib import Path
 
 
-def part1(lines):
-    circuit = {}
-    expr_cache = {}
+class CircuitEvaluator:
+    def __init__(self, lines):
+        self.rules = {}
+        self.expr_cache = {}
+        for line in lines:
+            match = re.match(r"^(?P<expr>.*) -> (?P<out>\w+)$", line)
+            expr = match.group("expr")
+            out = match.group("out")
+            self.rules[out] = expr
 
-    for line in lines:
-        match = re.match(r"^(?P<expr>.*) -> (?P<out>\w+)$", line)
-        expr = match.group("expr")
-        out = match.group("out")
-        circuit[out] = expr
-
-    def eval_expr(expr):
-        if expr in expr_cache:
-            return expr_cache[expr]
-        ret = eval_expr_nocache(expr)
-        expr_cache[expr] = ret
+    def eval_expr(self, expr):
+        if expr in self.expr_cache:
+            return self.expr_cache[expr]
+        ret = self.eval_expr_nocache(expr)
+        self.expr_cache[expr] = ret
         return ret
 
-    def eval_expr_nocache(expr):
+    def eval_expr_nocache(self, expr):
         if " " not in expr:
             if re.match(r"^\d+$", expr):
                 return int(expr)
-            return eval_expr(circuit[expr])
+            return self.eval_expr(self.rules[expr])
 
         match = re.match(r"^(?P<op>\w+) (?P<arg1>\w+)$", expr)
         if match:
             op = match.group("op").lower()
             arg1 = match.group("arg1")
             if op == "not":
-                return (~eval_expr(arg1)) & 0xFFFF
+                return (~self.eval_expr(arg1)) & 0xFFFF
             assert False, f"unknown unary operator {op}"
 
         match = re.match(r"^(?P<arg1>\w+) (?P<op>\w+) (?P<arg2>\w+)$", expr)
@@ -40,21 +40,39 @@ def part1(lines):
             arg1 = match.group("arg1")
             arg2 = match.group("arg2")
             if op == "and":
-                return eval_expr(arg1) & eval_expr(arg2)
+                return self.eval_expr(arg1) & self.eval_expr(arg2)
             elif op == "or":
-                return eval_expr(arg1) | eval_expr(arg2)
+                return self.eval_expr(arg1) | self.eval_expr(arg2)
             elif op == "lshift":
-                return eval_expr(arg1) << eval_expr(arg2)
+                return self.eval_expr(arg1) << self.eval_expr(arg2)
             elif op == "rshift":
-                return eval_expr(arg1) >> eval_expr(arg2)
+                return self.eval_expr(arg1) >> self.eval_expr(arg2)
             assert False, f"unknown binary operator {op}"
 
         assert False, expr
 
-    return eval_expr(circuit["a"])
+    def solve(self, var):
+        return self.eval_expr(self.rules[var])
+
+    def set_rule(self, var, rule):
+        self.rules[var] = str(rule)
+        self.expr_cache = {}
+
+
+def part1(lines):
+    evaluator = CircuitEvaluator(lines)
+    return evaluator.solve("a")
+
+
+def part2(lines):
+    evaluator = CircuitEvaluator(lines)
+    ret = evaluator.solve("a")
+    evaluator.set_rule("b", ret)
+    return evaluator.solve("a")
 
 
 if __name__ == "__main__":
     with Path(__file__).with_name("input.txt").open() as handle:
         lines = [line.rstrip() for line in handle]
         print(part1(lines))
+        print(part2(lines))
