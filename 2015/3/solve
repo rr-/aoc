@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+from pathlib import Path
+from collections import defaultdict
+
+
+def go(pos, char):
+    if char == ">":
+        return (pos[0] + 1, pos[1])
+    elif char == "<":
+        return (pos[0] - 1, pos[1])
+    elif char == "^":
+        return (pos[0], pos[1] - 1)
+    elif char == "v":
+        return (pos[0], pos[1] + 1)
+    raise AssertionError
+
+
+def part1(chars):
+    grid = defaultdict(int)
+    pos = (0, 0)
+    grid[pos] += 1
+    for char in chars:
+        pos = go(pos, char)
+        grid[pos] += 1
+    return sum(1 for pos in grid.keys() if grid[pos] >= 1)
+
+
+def part2(chars):
+    grid = defaultdict(int)
+    pos1 = (0, 0)
+    pos2 = (0, 0)
+    grid[pos1] += 1
+    grid[pos2] += 1
+    for char1, char2 in zip(chars[0::2], chars[1::2]):
+        pos1 = go(pos1, char1)
+        pos2 = go(pos2, char2)
+        grid[pos1] += 1
+        grid[pos2] += 1
+    return sum(1 for pos in grid.keys() if grid[pos] >= 1)
+
+
+if __name__ == "__main__":
+    chars = list(Path("input.txt").read_text().rstrip())
+    print(part1(chars))
+    print(part2(chars))
