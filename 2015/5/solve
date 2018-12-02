@@ -1,28 +1,29 @@
 #!/usr/bin/env python3
 from pathlib import Path
-
-
-def is_nice(word):
-    for part in ["ab", "cd", "pq", "xy"]:
-        if part in word:
-            return False
-
-    vowels = 0
-    double = False
-    prev_char = None
-
-    for char in word:
-        if char in "aeiou":
-            vowels += 1
-
-        if char == prev_char:
-            double = True
-        prev_char = char
-
-    return vowels >= 3 and double
+import re
 
 
 def part1(lines):
+    def is_nice(word):
+        if re.search("ab|cd|pq|xy", word):
+            return False
+        if len(re.findall("[aeiou]", word)) < 3:
+            return False
+        if not re.search(r"(.)\1", word):
+            return False
+        return True
+
+    return sum(1 for line in lines if is_nice(line))
+
+
+def part2(lines):
+    def is_nice(word):
+        if not re.search(r"(..).*\1", word):
+            return False
+        if not re.search(r"(.).\1", word):
+            return False
+        return True
+
     return sum(1 for line in lines if is_nice(line))
 
 
@@ -30,3 +31,4 @@ if __name__ == "__main__":
     with Path("input.txt").open() as handle:
         lines = [line.rstrip() for line in handle]
         print(part1(lines))
+        print(part2(lines))
