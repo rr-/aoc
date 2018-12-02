@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+from PIL import Image
+
+CMD_REGEX = re.compile(
+    "(?P<cmd>.+) (?P<x1>\d+),(?P<y1>\d+) through (?P<x2>\d+),(?P<y2>\d+)"
+)
+
+
+def dump_grid(grid, path):
+    img = Image.new("RGB", (1000, 1000), "black")
+    pixels = img.load()
+    for x, y in grid.keys():
+        pixels[x, y] = (255, 255, 255)
+    return img.save(str(path), format="png")
+
+
+def iter_pos(x1, y1, x2, y2):
+    for y in range(y1, y2 + 1):
+        for x in range(x1, x2 + 1):
+            yield x, y
+
+
+def part1(lines):
+    grid = defaultdict(bool)
+    for line in lines:
+        match = CMD_REGEX.match(line)
+        cmd = match.group("cmd")
+        x1 = int(match.group("x1"))
+        x2 = int(match.group("x2"))
+        y1 = int(match.group("y1"))
+        y2 = int(match.group("y2"))
+        if cmd == "turn off":
+            for x, y in iter_pos(x1, y1, x2, y2):
+                grid[x, y] = False
+        elif cmd == "turn on":
+            for x, y in iter_pos(x1, y1, x2, y2):
+                grid[x, y] = True
+        elif cmd == "toggle":
+            for x, y in iter_pos(x1, y1, x2, y2):
+                grid[x, y] = not grid[x, y]
+
+    dump_grid(grid, "part1.png")
+    return sum(1 for pos in grid.keys() if grid[pos])
+
+
+if __name__ == "__main__":
+    with Path(__file__).with_name("input.txt").open() as handle:
+        lines = [line.rstrip() for line in handle]
+        print(part1(lines))
