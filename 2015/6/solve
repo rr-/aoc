@@ -14,8 +14,11 @@ CMD_REGEX = re.compile(
 def dump_grid(grid, path):
     img = Image.new("RGB", (1000, 1000), "black")
     pixels = img.load()
+    min_value = min(grid.values())
+    max_value = max(grid.values())
     for x, y in grid.keys():
-        pixels[x, y] = (255, 255, 255)
+        brightness = (grid[x, y] - min_value) * 255 // (max_value - min_value)
+        pixels[x, y] = (brightness, brightness, brightness)
     return img.save(str(path), format="png")
 
 
@@ -44,11 +47,35 @@ def part1(lines):
             for x, y in iter_pos(x1, y1, x2, y2):
                 grid[x, y] = not grid[x, y]
 
-    dump_grid(grid, "part1.png")
+    dump_grid(grid, Path(__file__).with_name("part1.png"))
     return sum(1 for pos in grid.keys() if grid[pos])
+
+
+def part2(lines):
+    grid = defaultdict(int)
+    for line in lines:
+        match = CMD_REGEX.match(line)
+        cmd = match.group("cmd")
+        x1 = int(match.group("x1"))
+        x2 = int(match.group("x2"))
+        y1 = int(match.group("y1"))
+        y2 = int(match.group("y2"))
+        if cmd == "turn off":
+            for x, y in iter_pos(x1, y1, x2, y2):
+                grid[x, y] = max(0, grid[x, y] - 1)
+        elif cmd == "turn on":
+            for x, y in iter_pos(x1, y1, x2, y2):
+                grid[x, y] += 1
+        elif cmd == "toggle":
+            for x, y in iter_pos(x1, y1, x2, y2):
+                grid[x, y] += 2
+
+    dump_grid(grid, Path(__file__).with_name("part2.png"))
+    return sum(grid.values())
 
 
 if __name__ == "__main__":
     with Path(__file__).with_name("input.txt").open() as handle:
         lines = [line.rstrip() for line in handle]
         print(part1(lines))
+        print(part2(lines))
