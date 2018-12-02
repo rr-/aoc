@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+from pathlib import Path
+import heapq
+
+
+def part1(lines):
+    total_area = 0
+    for line in lines:
+        l, w, h = map(int, line.split("x"))
+        small = heapq.nsmallest(2, [l, w, h])
+        area = 2 * l * w + 2 * w * h + 2 * h * l
+        area += small[0] * small[1]
+        total_area += area
+    return total_area
+
+
+def part2(lines):
+    total_length = 0
+    for line in lines:
+        l, w, h = map(int, line.split("x"))
+        small = heapq.nsmallest(2, [l, w, h])
+        length = l * w * h
+        length += small[0] * 2 + small[1] * 2
+        total_length += length
+    return total_length
+
+
+if __name__ == "__main__":
+    with Path("input.txt").open() as handle:
+        lines = [line.rstrip() for line in handle]
+        print(part1(lines))
+        print(part2(lines))
