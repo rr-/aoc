@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+import itertools
+import re
+from pathlib import Path
+
+
+def part1(lines):
+    regex = re.compile(
+        r"(?P<person1>\w+) would (?P<op>gain|lose) (?P<num>\d+) "
+        r"happiness units by sitting next to (?P<person2>\w+)"
+    )
+
+    scores = {}
+    people = set()
+    for line in lines:
+        match = regex.match(line)
+        person1 = match.group("person1")
+        person2 = match.group("person2")
+        num = int(match.group("num")) * (
+            1 if match.group("op") == "gain" else -1
+        )
+        scores[person1, person2] = num
+        people.update([person1, person2])
+
+    def get_score(permutation):
+        score = 0
+        for i, person in enumerate(permutation):
+            score += scores[person, permutation[i - 1]]
+            score += scores[person, permutation[(i + 1) % len(permutation)]]
+        return score
+
+    return max(map(get_score, itertools.permutations(people)))
+
+
+if __name__ == "__main__":
+    with Path(__file__).with_name("input.txt").open() as handle:
+        lines = [line.rstrip() for line in handle]
+        print(part1(lines))
