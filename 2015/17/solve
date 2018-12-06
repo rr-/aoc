@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+from pathlib import Path
+
+
+def part1(numbers):
+    def take(target, available_numbers, used_numbers=[]):
+        if target < 0:
+            return
+
+        if target == 0:
+            yield used_numbers
+
+        for i, number in enumerate(available_numbers):
+            yield from take(
+                target - number,
+                available_numbers[i + 1 :],
+                used_numbers[:] + [number],
+            )
+
+    return len(list(take(150, numbers)))
+
+
+if __name__ == "__main__":
+    with Path(__file__).with_name("input.txt").open() as handle:
+        numbers = list(map(int, handle))
+    print(part1(numbers))
