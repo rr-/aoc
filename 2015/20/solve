@@ -1,26 +1,39 @@
 #!/usr/bin/env python3
-import itertools
-import math
 from pathlib import Path
 
 
-def get_divisors(n):
-    for i in range(1, int(math.sqrt(n) + 1)):
-        if n % i == 0:
-            yield i
-            if i * i != n:
-                yield n // i
+def get_upper_bound(number):
+    return int(number ** 0.8)
 
 
-def part1(number):
-    for i in itertools.count(1):
-        if sum(get_divisors(i)) * 10 >= number:
+def part1(goal):
+    upper_bound = get_upper_bound(goal)
+    arr = [0] * upper_bound
+    for i in range(1, upper_bound + 1):
+        for j, k in enumerate(range(i, upper_bound, i)):
+            arr[k] += i * 10
+    for i, value in enumerate(arr):
+        if value >= goal:
+            return i
+
+
+def part2(goal):
+    upper_bound = get_upper_bound(goal)
+    arr = [0] * upper_bound
+    for i in range(1, upper_bound + 1):
+        for j, k in enumerate(range(i, upper_bound, i)):
+            if j >= 50:
+                 break
+            arr[k] += i * 11
+    for i, value in enumerate(arr):
+        if value >= goal:
             return i
 
 
 def main():
     number = int(Path(__file__).with_name("input.txt").read_text())
     print(part1(number))
+    print(part2(number))
 
 
 if __name__ == "__main__":
