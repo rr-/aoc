@@ -68,7 +68,23 @@ def part1(lines):
     )
 
 
+def part2(lines):
+    ingredients = list(get_ingredients(lines))
+    return max(
+        [
+            get_score(ingredients, division)
+            for division in divide(100, len(ingredients))
+            if sum(
+                count * ingredient.calories
+                for count, ingredient in zip(division, ingredients)
+            )
+            == 500
+        ]
+    )
+
+
 if __name__ == "__main__":
     with Path(__file__).with_name("input.txt").open() as handle:
         lines = [line.rstrip() for line in handle]
         print(part1(lines))
+        print(part2(lines))
