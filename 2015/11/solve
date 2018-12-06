@@ -37,6 +37,11 @@ def part1(word):
             return word
 
 
+def part2(word):
+    return part1(part1(word))
+
+
 if __name__ == "__main__":
     word = Path(__file__).with_name("input.txt").read_text().strip()
     print(part1(word))
+    print(part2(word))
