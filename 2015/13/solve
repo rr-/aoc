@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 
-def part1(lines):
+def get_scores_and_people(lines):
     regex = re.compile(
         r"(?P<person1>\w+) would (?P<op>gain|lose) (?P<num>\d+) "
         r"happiness units by sitting next to (?P<person2>\w+)"
@@ -22,17 +22,39 @@ def part1(lines):
         scores[person1, person2] = num
         people.update([person1, person2])
 
-    def get_score(permutation):
-        score = 0
-        for i, person in enumerate(permutation):
-            score += scores[person, permutation[i - 1]]
-            score += scores[person, permutation[(i + 1) % len(permutation)]]
-        return score
+    return scores, people
 
-    return max(map(get_score, itertools.permutations(people)))
+
+def get_score(scores, permutation):
+    score = 0
+    for i, person in enumerate(permutation):
+        score += scores[person, permutation[i - 1]]
+        score += scores[person, permutation[(i + 1) % len(permutation)]]
+    return score
+
+
+def part1(lines):
+    scores, people = get_scores_and_people(lines)
+    return max(
+        get_score(scores, permutation)
+        for permutation in itertools.permutations(people)
+    )
+
+
+def part2(lines):
+    scores, people = get_scores_and_people(lines)
+    people.add("me")
+    for person in people:
+        scores[person, "me"] = 0
+        scores["me", person] = 0
+    return max(
+        get_score(scores, permutation)
+        for permutation in itertools.permutations(people)
+    )
 
 
 if __name__ == "__main__":
     with Path(__file__).with_name("input.txt").open() as handle:
         lines = [line.rstrip() for line in handle]
         print(part1(lines))
+        print(part2(lines))
