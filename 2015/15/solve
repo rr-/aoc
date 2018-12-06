@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+import functools
+import itertools
+import operator
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Ingredient:
+    name: str
+    capacity: int
+    durability: int
+    flavor: int
+    texture: int
+    calories: int
+
+
+def get_ingredients(lines):
+    for line in lines:
+        name, rest = line.split(": ")
+        stats = {}
+        for item in rest.split(", "):
+            stat_name, stat_value = item.split(" ")
+            stats[stat_name] = int(stat_value)
+        yield Ingredient(
+            name=name,
+            capacity=stats["capacity"],
+            durability=stats["durability"],
+            flavor=stats["flavor"],
+            texture=stats["texture"],
+            calories=stats["calories"],
+        )
+
+
+def divide(target_sum, level, current_sum=0, current=[]):
+    if level == 1:
+        current.append(target_sum - current_sum)
+        yield current
+    else:
+        for i in range(1, target_sum + 1):
+            if current_sum + i + level - 1 > target_sum:
+                break
+            yield from divide(
+                target_sum, level - 1, current_sum + i, current + [i]
+            )
+
+
+def get_score(ingredients, counts):
+    parts = [0, 0, 0, 0]
+    for count, ingredient in zip(counts, ingredients):
+        parts[0] += count * ingredient.capacity
+        parts[1] += count * ingredient.durability
+        parts[2] += count * ingredient.flavor
+        parts[3] += count * ingredient.texture
+    if any(part < 0 for part in parts):
+        return 0
+    return functools.reduce(operator.mul, parts, 1)
+
+
+def part1(lines):
+    ingredients = list(get_ingredients(lines))
+    return max(
+        [
+            get_score(ingredients, division)
+            for division in divide(100, len(ingredients))
+        ]
+    )
+
+
+if __name__ == "__main__":
+    with Path(__file__).with_name("input.txt").open() as handle:
+        lines = [line.rstrip() for line in handle]
+        print(part1(lines))
