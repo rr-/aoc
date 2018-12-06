@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+import itertools
+import math
+from pathlib import Path
+
+
+def get_divisors(n):
+    for i in range(1, int(math.sqrt(n) + 1)):
+        if n % i == 0:
+            yield i
+            if i * i != n:
+                yield n // i
+
+
+def part1(number):
+    for i in itertools.count(1):
+        if sum(get_divisors(i)) * 10 >= number:
+            return i
+
+
+def main():
+    number = int(Path(__file__).with_name("input.txt").read_text())
+    print(part1(number))
+
+
+if __name__ == "__main__":
+    main()
