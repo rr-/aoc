@@ -13,9 +13,12 @@ class Rule:
 
 @dataclass
 class State:
-    flying: bool
-    step: int
-    distance: int
+    name: str
+    rule: Rule
+    flying: bool = True
+    step: int = 0
+    distance: int = 0
+    score: int = 0
 
 
 def get_rules(lines):
@@ -37,29 +40,46 @@ def get_rules(lines):
     return rules
 
 
+def get_states(rules):
+    return [State(name=name, rule=rule) for name, rule in rules.items()]
+
+
+def simulation(states, rounds):
+    for _ in range(rounds):
+        for state in states:
+            state.step += 1
+            if state.flying:
+                state.distance += state.rule.speed
+                if state.step == state.rule.limit:
+                    state.flying = False
+                    state.step = 0
+            else:
+                if state.step == state.rule.rest:
+                    state.flying = True
+                    state.step = 0
+
+        best_state = max(states, key=lambda state: state.distance)
+        for state in states:
+            if state.distance == best_state.distance:
+                state.score += 1
+
+
 def part1(lines):
     rules = get_rules(lines)
-    state = {
-        name: State(flying=True, step=0, distance=0) for name in rules.keys()
-    }
+    states = get_states(rules)
+    simulation(states, 2503)
+    return max(states, key=lambda state: state.distance).distance
 
-    for _ in range(2503):
-        for name, rule in rules.items():
-            state[name].step += 1
-            if state[name].flying:
-                state[name].distance += rule.speed
-                if state[name].step == rule.limit:
-                    state[name].flying = False
-                    state[name].step = 0
-            else:
-                if state[name].step == rule.rest:
-                    state[name].flying = True
-                    state[name].step = 0
 
-    return max(state.items(), key=lambda kv: kv[1].distance)[1].distance
+def part2(lines):
+    rules = get_rules(lines)
+    states = get_states(rules)
+    simulation(states, 2503)
+    return max(states, key=lambda state: state.score).score
 
 
 if __name__ == "__main__":
     with Path(__file__).with_name("input.txt").open() as handle:
         lines = [line.rstrip() for line in handle]
         print(part1(lines))
+        print(part2(lines))
