@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+import re
+from pathlib import Path
+
+
+def expand(number):
+    text = str(number)
+    ret = ""
+    while text:
+        match = re.match(r"(.)\1*", text)
+        count = match.end()
+        ret += str(count) + match.group(1)
+        text = text[count:]
+    return ret
+
+
+def part1(number):
+    for _ in range(40):
+        number = expand(number)
+    return len(number)
+
+
+if __name__ == "__main__":
+    number = int(Path(__file__).with_name("input.txt").read_text())
+    print(part1(number))
