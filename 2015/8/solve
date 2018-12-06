@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+import ast
+from pathlib import Path
+
+
+def part1(lines):
+    return sum(map(len, lines)) - sum(map(len, map(ast.literal_eval, lines)))
+
+
+if __name__ == "__main__":
+    with Path(__file__).with_name("input.txt").open() as handle:
+        lines = [line.rstrip() for line in handle]
+        print(part1(lines))
