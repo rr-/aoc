@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import functools
+import operator
 from pathlib import Path
 
 import regex
@@ -37,7 +39,23 @@ def part1(lines):
     return -1
 
 
+def part2(lines):
+    PATTERN2 = {
+        key: functools.partial(operator.eq, value)
+        for key, value in PATTERN.items()
+    }
+    for key in ["cats", "trees"]:
+        PATTERN2[key] = functools.partial(operator.lt, PATTERN[key])
+    for key in ["pomeranians", "goldfish"]:
+        PATTERN2[key] = functools.partial(operator.gt, PATTERN[key])
+    for num, info in get_info(lines).items():
+        if all(PATTERN2[key](value) for key, value in info.items()):
+            return num
+    return -1
+
+
 if __name__ == "__main__":
     with Path(__file__).with_name("input.txt").open() as handle:
         lines = [line.rstrip() for line in handle]
         print(part1(lines))
+        print(part2(lines))
