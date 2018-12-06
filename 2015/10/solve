@@ -1,21 +1,30 @@
 #!/usr/bin/env python3
-import re
 from pathlib import Path
 
 
 def expand(number):
     text = str(number)
     ret = ""
-    while text:
-        match = re.match(r"(.)\1*", text)
-        count = match.end()
-        ret += str(count) + match.group(1)
-        text = text[count:]
+    i = 0
+    while i < len(text):
+        count = 1
+        j = i + 1
+        while j < len(text) and text[j] == text[i]:
+            j += 1
+            count += 1
+        ret += str(count) + text[i]
+        i = j
     return ret
 
 
 def part1(number):
-    for _ in range(40):
+    for i in range(40):
+        number = expand(number)
+    return len(number)
+
+
+def part2(number):
+    for i in range(50):
         number = expand(number)
     return len(number)
 
@@ -23,3 +32,4 @@ def part1(number):
 if __name__ == "__main__":
     number = int(Path(__file__).with_name("input.txt").read_text())
     print(part1(number))
+    print(part2(number))
