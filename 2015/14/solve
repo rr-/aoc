@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+import re
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Rule:
+    speed: int
+    limit: int
+    rest: int
+
+
+@dataclass
+class State:
+    flying: bool
+    step: int
+    distance: int
+
+
+def get_rules(lines):
+    regex = re.compile(
+        r"(?P<name>\w+) can fly (?P<speed>\d+) km/s "
+        "for (?P<limit>\d+) seconds, "
+        r"but then must rest for (?P<rest>\d+) seconds\."
+    )
+
+    rules = {}
+    for line in lines:
+        match = regex.match(line)
+        name = match.group("name")
+        speed = int(match.group("speed"))
+        limit = int(match.group("limit"))
+        rest = int(match.group("rest"))
+        rules[name] = Rule(speed=speed, limit=limit, rest=rest)
+
+    return rules
+
+
+def part1(lines):
+    rules = get_rules(lines)
+    state = {
+        name: State(flying=True, step=0, distance=0) for name in rules.keys()
+    }
+
+    for _ in range(2503):
+        for name, rule in rules.items():
+            state[name].step += 1
+            if state[name].flying:
+                state[name].distance += rule.speed
+                if state[name].step == rule.limit:
+                    state[name].flying = False
+                    state[name].step = 0
+            else:
+                if state[name].step == rule.rest:
+                    state[name].flying = True
+                    state[name].step = 0
+
+    return max(state.items(), key=lambda kv: kv[1].distance)[1].distance
+
+
+if __name__ == "__main__":
+    with Path(__file__).with_name("input.txt").open() as handle:
+        lines = [line.rstrip() for line in handle]
+        print(part1(lines))
