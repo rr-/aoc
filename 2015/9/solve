@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 
-def part1(lines):
+def get_routes(lines):
     regex = re.compile(
         r"^(?P<place1>\w+) to (?P<place2>\w+) = (?P<distance>\d+)$"
     )
@@ -37,10 +37,19 @@ def part1(lines):
         for start in places:
             yield from traverse(start)
 
-    return min(item[1] for item in traverse_all())
+    yield from traverse_all()
+
+
+def part1(lines):
+    return min(item[1] for item in get_routes(lines))
+
+
+def part2(lines):
+    return max(item[1] for item in get_routes(lines))
 
 
 if __name__ == "__main__":
     with Path(__file__).with_name("input.txt").open() as handle:
         lines = [line.rstrip() for line in handle]
         print(part1(lines))
+        print(part2(lines))
