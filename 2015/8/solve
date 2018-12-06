@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import ast
+import re
 from pathlib import Path
 
 
@@ -7,7 +8,15 @@ def part1(lines):
     return sum(map(len, lines)) - sum(map(len, map(ast.literal_eval, lines)))
 
 
+def part2(lines):
+    def escape(text):
+        return '"' + re.sub(r'(["\\])', "\\\\\\1", text) + '"'
+
+    return sum(map(len, map(escape, lines))) - sum(map(len, lines))
+
+
 if __name__ == "__main__":
     with Path(__file__).with_name("input.txt").open() as handle:
         lines = [line.rstrip() for line in handle]
         print(part1(lines))
+        print(part2(lines))
