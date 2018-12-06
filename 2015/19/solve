@@ -1,16 +1,31 @@
 #!/usr/bin/env python3
-import re
 from pathlib import Path
 
 
 def part1(replacements, pattern):
     def generate():
-        for left, right in replacements:
-            for match in re.finditer(re.escape(left), pattern):
-                start, end = match.span()
-                yield pattern[:start] + right + pattern[end:]
+        for i in range(len(pattern)):
+            for left, right in replacements:
+                if pattern[i : i + len(left)] == left:
+                    yield pattern[:i] + right + pattern[i + len(left) :]
 
     return len(set(generate()))
+
+
+def part2(replacements, pattern):
+    steps = 0
+    while True:
+        found = False
+        for i in range(len(pattern)):
+            for left, right in replacements:
+                if pattern.startswith(right, i):
+                    pattern = pattern[:i] + left + pattern[i + len(right) :]
+                    steps += 1
+                    found = True
+        if not found:
+            break
+    assert pattern == "e"
+    return steps
 
 
 def main():
@@ -19,6 +34,7 @@ def main():
     pattern = lines.pop()
     replacements = [line.split(" => ") for line in lines[:-1]]
     print(part1(replacements, pattern))
+    print(part2(replacements, pattern))
 
 
 if __name__ == "__main__":
