@@ -2,25 +2,33 @@
 from pathlib import Path
 
 
+def take(target, available_numbers, used_numbers=[]):
+    if target < 0:
+        return
+
+    if target == 0:
+        yield used_numbers
+
+    for i, number in enumerate(available_numbers):
+        yield from take(
+            target - number,
+            available_numbers[i + 1 :],
+            used_numbers[:] + [number],
+        )
+
+
 def part1(numbers):
-    def take(target, available_numbers, used_numbers=[]):
-        if target < 0:
-            return
-
-        if target == 0:
-            yield used_numbers
-
-        for i, number in enumerate(available_numbers):
-            yield from take(
-                target - number,
-                available_numbers[i + 1 :],
-                used_numbers[:] + [number],
-            )
-
     return len(list(take(150, numbers)))
+
+
+def part2(numbers):
+    combinations = list(take(150, numbers))
+    min_length = min(map(len, combinations))
+    return len([comb for comb in combinations if len(comb) == min_length])
 
 
 if __name__ == "__main__":
     with Path(__file__).with_name("input.txt").open() as handle:
         numbers = list(map(int, handle))
     print(part1(numbers))
+    print(part2(numbers))
