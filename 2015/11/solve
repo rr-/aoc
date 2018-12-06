@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+import re
+import string
+from pathlib import Path
+
+
+def part1(word):
+    def increment(word):
+        alphabet = string.ascii_lowercase
+        num = 0
+        for char in word:
+            num *= len(alphabet)
+            num += alphabet.index(char)
+        num += 1
+        ret = ""
+        while num:
+            ret = alphabet[num % len(alphabet)] + ret
+            num //= len(alphabet)
+        return ret
+
+    def is_valid(word):
+        sequences = [
+            chr(char) + chr(char + 1) + chr(char + 2)
+            for char in range(ord("a"), ord("x") + 1)
+        ]
+        if all(sequence not in word for sequence in sequences):
+            return False
+        if any(letter in word for letter in "iol"):
+            return False
+        if not re.search(r"(.)\1.*(.)\2", word):
+            return False
+        return True
+
+    while True:
+        word = increment(word)
+        if is_valid(word):
+            return word
+
+
+if __name__ == "__main__":
+    word = Path(__file__).with_name("input.txt").read_text().strip()
+    print(part1(word))
