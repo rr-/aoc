@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+import re
+from pathlib import Path
+
+
+def part1(replacements, pattern):
+    def generate():
+        for left, right in replacements:
+            for match in re.finditer(re.escape(left), pattern):
+                start, end = match.span()
+                yield pattern[:start] + right + pattern[end:]
+
+    return len(set(generate()))
+
+
+def main():
+    with Path(__file__).with_name("input.txt").open() as handle:
+        lines = list(map(str.rstrip, handle))
+    pattern = lines.pop()
+    replacements = [line.split(" => ") for line in lines[:-1]]
+    print(part1(replacements, pattern))
+
+
+if __name__ == "__main__":
+    main()
