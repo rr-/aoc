@@ -10,30 +10,64 @@ def read_grid(lines):
     }
 
 
-def simulate(grid, rounds):
+def get_grid_size(grid):
     width = max(x for x, y in grid.keys()) + 1
     height = max(y for x, y in grid.keys()) + 1
-    for _ in range(rounds):
+    return width, height
+
+
+def get_neighbours(grid, x, y):
+    return sum(
+        grid.get((x + x2, y + y2), 0)
+        for x2 in (-1, 0, 1)
+        for y2 in (-1, 0, 1)
+        if x2 != 0 or y2 != 0
+    )
+
+
+def part1(lines):
+    grid = read_grid(lines)
+    width, height = get_grid_size(grid)
+
+    for _ in range(100):
         new_grid = {}
         for y in range(height):
             for x in range(width):
-                neighbours = sum(
-                    grid.get((x + x2, y + y2), 0)
-                    for x2 in (-1, 0, 1)
-                    for y2 in (-1, 0, 1)
-                    if x2 != 0 or y2 != 0
-                )
+                neighbours = get_neighbours(grid, x, y)
                 if grid[x, y]:
                     new_grid[x, y] = neighbours in {2, 3}
                 else:
                     new_grid[x, y] = neighbours == 3
         grid = new_grid
-    return grid
+
+    return len([val for val in grid.values() if val])
 
 
-def part1(lines):
+def part2(lines):
     grid = read_grid(lines)
-    grid = simulate(grid, 100)
+    width, height = get_grid_size(grid)
+    corners = {
+        (0, 0),
+        (width - 1, 0),
+        (0, height - 1),
+        (width - 1, height - 1),
+    }
+    for x, y in corners:
+        grid[x, y] = True
+
+    for _ in range(100):
+        new_grid = {}
+        for y in range(height):
+            for x in range(width):
+                neighbours = get_neighbours(grid, x, y)
+                if (x, y) in corners:
+                    new_grid[x, y] = True
+                elif grid[x, y]:
+                    new_grid[x, y] = neighbours in {2, 3}
+                else:
+                    new_grid[x, y] = neighbours == 3
+        grid = new_grid
+
     return len([val for val in grid.values() if val])
 
 
@@ -41,3 +75,4 @@ if __name__ == "__main__":
     with Path(__file__).with_name("input.txt").open() as handle:
         lines = list(map(str.rstrip, handle))
     print(part1(lines))
+    print(part2(lines))
