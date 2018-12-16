@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import re
+import statistics
 import typing as T
 from collections import defaultdict
 from dataclasses import dataclass
@@ -62,7 +63,7 @@ def dump_grid(grid: Grid, path: Path) -> None:
 
 def part1(coords: T.List[Coord]) -> int:
     grid = Grid(coords)
-    distances: T.Dict[int, T.List[Coord]] = defaultdict(list)
+    distances: T.Dict[int, T.List[int]] = defaultdict(list)
     for y in range(grid.y1, grid.y2 + 1):
         for x in range(grid.x1, grid.x2 + 1):
             distances.clear()
@@ -95,11 +96,39 @@ def part1(coords: T.List[Coord]) -> int:
     return largest_area
 
 
+def part2(coords: T.List[Coord]) -> int:
+    center_x = int(statistics.mean(coord.x for coord in coords))
+    center_y = int(statistics.mean(coord.y for coord in coords))
+
+    goal = 10000
+
+    def total_distance(x: int, y: int) -> int:
+        return sum(abs(coord.x - x) + abs(coord.y - y) for coord in coords)
+
+    area = 0
+    queue: T.List[T.Tuple[int, int]] = [(center_x, center_y)]
+    visited: T.Set[T.Tuple[int, int]] = set()
+    while queue:
+        x, y = queue.pop(0)
+        visited.add((x, y))
+        if total_distance(x, y) < goal:
+            area += 1
+        for dx, dy in [(- 1, 0), (1, 0), (0, -1), (0, +1)]:
+            nx = x + dx
+            ny = y + dy
+            if (nx, ny) not in visited and total_distance(nx, ny) < goal:
+                visited.add((nx, ny))
+                queue.append((nx, ny))
+
+    return area
+
+
 def main() -> None:
     with Path(__file__).with_name("input.txt").open() as handle:
         coords = list(map(Coord.from_line, handle))
 
     print(part1(coords))
+    print(part2(coords))
 
 
 if __name__ == "__main__":
