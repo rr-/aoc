@@ -16,9 +16,10 @@ class Instruction:
         return Instruction(opcode=parts[0], args=parts[1:])
 
 
-def part1(instructions: T.List[Instruction]) -> int:
+def execute(
+    instructions: T.List[Instruction], registers: T.Dict[str, int]
+) -> int:
     eip = 0
-    registers = {"a": 0, "b": 0}
     while 0 <= eip < len(instructions):
         instruction = instructions[eip]
         if instruction.opcode == "hlf":
@@ -47,10 +48,19 @@ def part1(instructions: T.List[Instruction]) -> int:
     return registers["b"]
 
 
+def part1(instructions: T.List[Instruction]) -> int:
+    return execute(instructions, {"a": 0, "b": 0})
+
+
+def part2(instructions: T.List[Instruction]) -> int:
+    return execute(instructions, {"a": 1, "b": 0})
+
+
 def main():
     with Path(__file__).with_name("input.txt").open() as handle:
         instructions = list(map(Instruction.from_line, handle))
     print(part1(instructions))
+    print(part2(instructions))
 
 
 if __name__ == "__main__":
