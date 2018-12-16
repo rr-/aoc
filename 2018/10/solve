@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+import copy
+import math
+import re
+import typing as T
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Rule:
+    x: int
+    y: int
+    dx: int
+    dy: int
+
+    @staticmethod
+    def from_line(line: str) -> "Rule":
+        x, y, dx, dy = map(int, re.findall(r"-?\d+", line))
+        return Rule(x=x, y=y, dx=dx, dy=dy)
+
+
+def get_bbox(rules: T.List[Rule]) -> T.Tuple[int, int, int, int]:
+    x1 = min(rule.x for rule in rules)
+    y1 = min(rule.y for rule in rules)
+    x2 = max(rule.x for rule in rules)
+    y2 = max(rule.y for rule in rules)
+    return x1, y1, x2, y2
+
+
+def get_size(rules: T.List[Rule]) -> T.Tuple[int, int]:
+    x1, y1, x2, y2 = get_bbox(rules)
+    return x2 + 1 - x1, y2 + 1 - y1
+
+
+def dump_grid(rules: T.List[Rule]) -> str:
+    x1, y1, x2, y2 = get_bbox(rules)
+    ret = ""
+    for y in range(y1, y2 + 1):
+        for x in range(x1, x2 + 1):
+            ret += "".join(
+                "#"
+                if any(rule.x == x and rule.y == y for rule in rules)
+                else "."
+            )
+        ret += "\n"
+    return ret.strip()
+
+
+def apply_rules(rules: T.List[Rule], elapsed: int) -> T.List[Rule]:
+    rules = copy.deepcopy(rules)
+    for rule in rules:
+        rule.x += rule.dx * elapsed
+        rule.y += rule.dy * elapsed
+    return rules
+
+
+def rate_rules(rules: T.List[Rule], elapsed: int) -> float:
+    w, h = get_size(apply_rules(rules, elapsed))
+    return (w + h) / 2
+
+
+def part1(rules: T.List[Rule]) -> int:
+    delta = 5000
+
+    elapsed = 0
+    best_rating = rate_rules(rules, 0)
+    while True:
+        rating_left = rate_rules(rules, elapsed - delta)
+        rating_right = rate_rules(rules, elapsed + delta)
+        if rating_left < best_rating:
+            elapsed -= delta
+            best_rating = rating_left
+        elif rating_right < best_rating:
+            elapsed += delta
+            best_rating = rating_right
+        else:
+            delta //= 2
+            if delta == 0:
+                return dump_grid(apply_rules(rules, elapsed))
+
+
+def main() -> None:
+    with Path(__file__).with_name("input.txt").open() as handle:
+        rules = list(map(Rule.from_line, handle))
+
+    print(part1(rules))
+
+
+if __name__ == "__main__":
+    main()
