@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 import typing as T
 from pathlib import Path
 
@@ -11,27 +12,49 @@ def measure(x: int, y: int, serial: int) -> int:
     return val
 
 
-def part1(serial: int) -> T.Tuple[int, int]:
-    size = 300
+def get_best_stats(
+    serial: int, grid_size: int, cell_sizes: T.List[int]
+) -> T.Tuple[int, int, int]:
+    grid_size = 300
     grid = {
         (x, y): measure(x, y, serial)
-        for x in range(1, size + 1)
-        for y in range(1, size + 1)
+        for x in range(1, grid_size + 1)
+        for y in range(1, grid_size + 1)
     }
+
     best_value = 0
     best_x = 0
     best_y = 0
-    for x in range(1, size + 1 - 2):
-        for y in range(1, size + 1 - 2):
+    best_cell_size = 0
+
+    for cell_size in cell_sizes:
+        print(f"{cell_size}…", file=sys.stderr, end="\r")
+        for y in range(1, grid_size + 1 - cell_size):
             value = 0
-            for dx in range(3):
-                for dy in range(3):
-                    value += grid[x + dx, y + dy]
-            if value > best_value:
-                best_x = x
-                best_y = y
-                best_value = value
-    return best_x, best_y
+            for dy in range(cell_size):
+                for dx in range(cell_size):
+                    value += grid[1 + dx, y + dy]
+            for x in range(1, grid_size + 1 - cell_size):
+                if value > best_value:
+                    best_x = x
+                    best_y = y
+                    best_cell_size = cell_size
+                    best_value = value
+                for dy in range(cell_size):
+                    value -= grid[x, y + dy]
+                    value += grid[x + cell_size, y + dy]
+
+    return best_x, best_y, best_cell_size
+
+
+def part1(serial: int) -> T.Tuple[int, int]:
+    x, y, size = get_best_stats(serial, 300, [3])
+    return x, y
+
+
+def part2(serial: int) -> T.Tuple[int, int, int]:
+    x, y, size = get_best_stats(serial, 300, list(range(1, 301)))
+    return x, y, size
 
 
 def main() -> None:
@@ -39,6 +62,8 @@ def main() -> None:
 
     x, y = part1(serial)
     print(f"{x},{y}")
+    x, y, size = part2(serial)
+    print(f"{x},{y},{size}")
 
 
 if __name__ == "__main__":
