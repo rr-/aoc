@@ -2,25 +2,79 @@
 import re
 import typing as T
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 
 
-def part1(players: int, highest_marble: int) -> int:
-    ring = [0]
-    current = 1
-    marbles = list(range(1, highest_marble + 1))
-    scores: T.Dict[int, int] = defaultdict(int)
-    for i, marble in enumerate(marbles):
-        player = i % players
-        if marble % 23 == 0:
-            scores[player] += marble
-            current = (current - 7) % len(ring)
-            scores[player] += ring[current]
-            del ring[current]
+@dataclass
+class Node:
+    value: int
+    left: T.Optional["Node"] = None
+    right: T.Optional["Node"] = None
+
+
+class LinkedList:
+    def __init__(self) -> None:
+        self.size = 0
+        self.current_node: T.Optional[Node] = None
+
+    def insert(self, value: int) -> None:
+        node = Node(value=value)
+        if not self.size:
+            node.left = node
+            node.right = node
         else:
-            current = (current + 1) % len(ring) + 1
-            ring.insert(current, marble)
-    return max(scores.values())
+            assert self.current_node
+            assert self.current_node.right
+            node.left = self.current_node
+            node.right = self.current_node.right
+            self.current_node.right.left = node
+            self.current_node.right = node
+        self.current_node = node
+        self.size += 1
+
+    def pop(self) -> int:
+        assert self.current_node
+        assert self.current_node.left
+        assert self.current_node.right
+        value = self.current_node.value
+        self.current_node.left.right = self.current_node.right
+        self.current_node.right.left = self.current_node.left
+        self.current_node = self.current_node.right
+        self.size -= 1
+        return value
+
+    def move(self, distance: int) -> None:
+        if not self.size:
+            return
+        assert self.current_node
+        if distance > 0:
+            assert self.current_node.right
+            for _ in range(distance):
+                self.current_node = self.current_node.right
+        else:
+            assert self.current_node.left
+            for _ in range(-distance):
+                self.current_node = self.current_node.left
+
+
+def part1(players: int, highest_marble: int) -> int:
+    ring = LinkedList()
+    ring.insert(value=0)
+    scores = [0] * players
+    for marble in range(1, highest_marble + 1):
+        player = marble % players
+        if marble % 23 == 0:
+            ring.move(-7)
+            scores[player] += marble + ring.pop()
+        else:
+            ring.move(1)
+            ring.insert(marble)
+    return max(scores)
+
+
+def part2(players: int, highest_marble: int) -> int:
+    return part1(players, highest_marble * 100)
 
 
 def main() -> None:
@@ -28,6 +82,7 @@ def main() -> None:
     players, highest_marble = map(int, re.findall(r"\d+", text))
 
     print(part1(players, highest_marble))
+    print(part2(players, highest_marble))
 
 
 if __name__ == "__main__":
