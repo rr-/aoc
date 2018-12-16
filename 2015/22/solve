@@ -176,6 +176,7 @@ KNOWN_MINIMUM_MANA_SPENT: int = math.inf
 def battle(
     player: Creature,
     boss: Creature,
+    hard: bool,
     turn: int = 0,
     mana_spent_so_far: int = 0,
     spells_casted: T.List[str] = [],
@@ -194,6 +195,8 @@ def battle(
     boss = copy.deepcopy(boss)
     for aura in player.auras:
         aura.work(player, boss)
+    if hard and turn % 2 == 0:
+        player.health -= 1
 
     if player.mana <= 0 or player.health <= 0:
         return math.inf, []
@@ -223,6 +226,7 @@ def battle(
             result = battle(
                 player,
                 boss,
+                hard,
                 turn + 1,
                 mana_spent_so_far + spell.cost,
                 spells_casted + [spell.name],
@@ -241,12 +245,19 @@ def battle(
         return minimum_mana_to_spend, best_spells
     else:
         boss.action.work(boss, player)
-        return battle(player, boss, turn + 1, mana_spent_so_far, spells_casted)
+        return battle(
+            player, boss, hard, turn + 1, mana_spent_so_far, spells_casted
+        )
 
 
 def part1(boss: Creature) -> int:
     player = Creature(name="Player", health=50, mana=500, action=DoNothing())
-    return battle(player, boss)
+    return battle(player, boss, hard=False)
+
+
+def part2(boss: Creature) -> int:
+    player = Creature(name="Player", health=50, mana=500, action=DoNothing())
+    return battle(player, boss, hard=True)
 
 
 def main() -> None:
@@ -264,6 +275,7 @@ def main() -> None:
         action=PhysicalDamage(damage=numbers[1]),
     )
     print(part1(boss))
+    print(part2(boss))
 
 
 if __name__ == "__main__":
