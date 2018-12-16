@@ -7,32 +7,39 @@ import typing as T
 from pathlib import Path
 
 
-def find_smallest_group1_size(sizes: T.List[int]) -> T.Optional[None]:
-    target = sum(sizes) // 3
+def find_group1(sizes: T.List[int], target: int) -> T.Iterable[T.List[int]]:
     for i in range(2, len(sizes)):
+        found = False
         for comb in itertools.combinations(sizes, i):
             if sum(comb) == target:
-                return i
-    return None
+                yield comb
+                found = True
+        if found:
+            break
+
+
+def find_min_qe(sizes: T.List[int], target: int) -> int:
+    result = math.inf
+    for group in find_group1(sizes, target):
+        result = min(functools.reduce(operator.mul, group), result)
+    return result
 
 
 def part1(sizes: T.List[int]) -> T.Optional[int]:
-    min_group1_size = find_smallest_group1_size(sizes)
-
-    print(min_group1_size)
-
     target = sum(sizes) // 3
-    result = math.inf
-    for group in itertools.combinations(sizes, min_group1_size):
-        if sum(group) == target:
-            result = min(functools.reduce(operator.mul, group), result)
-    return result
+    return find_min_qe(sizes, target)
+
+
+def part2(sizes: T.List[int]) -> T.Optional[int]:
+    target = sum(sizes) // 4
+    return find_min_qe(sizes, target)
 
 
 def main():
     with Path(__file__).with_name("input.txt").open() as handle:
         sizes = list(map(int, handle))
     print(part1(sizes))
+    print(part2(sizes))
 
 
 if __name__ == "__main__":
