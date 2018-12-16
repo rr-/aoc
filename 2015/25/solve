@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+import re
+from pathlib import Path
+
+
+def unscramble(y: int, x: int) -> int:
+    return x + sum(range(y + x - 1))
+
+
+def part1(row: int, col: int) -> int:
+    idx = unscramble(row, col)
+    num = 20151125
+    for _ in range(idx - 1):
+        num *= 252533
+        num %= 33554393
+    return num
+
+
+def main():
+    text = Path(__file__).with_name("input.txt").read_text()
+    row, col = map(int, re.findall(r"\d+", text))
+    print(part1(row, col))
+
+
+if __name__ == "__main__":
+    main()
