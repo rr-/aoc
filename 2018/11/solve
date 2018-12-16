@@ -27,22 +27,29 @@ def get_best_stats(
     best_y = 0
     best_cell_size = 0
 
-    for cell_size in cell_sizes:
-        print(f"{cell_size}…", file=sys.stderr, end="\r")
-        for y in range(1, grid_size + 1 - cell_size):
+    row_sums: T.Dict[T.Tuple[int, int, int], int] = {}
+    for y in range(1, grid_size + 1):
+        for x1 in range(1, grid_size + 1):
             value = 0
-            for dy in range(cell_size):
-                for dx in range(cell_size):
-                    value += grid[1 + dx, y + dy]
+            for cell_size in range(max(cell_sizes) + 1):
+                x2 = x1 + cell_size
+                if x2 > grid_size:
+                    break
+                row_sums[x1, x2, y] = value
+                value += grid[x2, y]
+
+    for cell_size in cell_sizes:
+        print(f"{cell_size}…", file=sys.stderr, end="\r", flush=True)
+        for y in range(1, grid_size + 1 - cell_size):
             for x in range(1, grid_size + 1 - cell_size):
+                value = 0
+                for dy in range(cell_size):
+                    value += row_sums[x, x + cell_size, y + dy]
                 if value > best_value:
                     best_x = x
                     best_y = y
                     best_cell_size = cell_size
                     best_value = value
-                for dy in range(cell_size):
-                    value -= grid[x, y + dy]
-                    value += grid[x + cell_size, y + dy]
 
     return best_x, best_y, best_cell_size
 
