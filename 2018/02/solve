@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import itertools
 import string
 import typing as T
 from pathlib import Path
@@ -17,10 +18,30 @@ def part1(words: T.List[str]) -> int:
     return twice * thrice
 
 
+def difference(word1: str, word2: str) -> int:
+    ret = 0
+    for i in range(len(word1)):
+        if word1[i] != word2[i]:
+            ret += 1
+    return ret
+
+
+def part2(words: T.List[str]) -> T.Optional[str]:
+    for word1, word2 in itertools.combinations(words, 2):
+        if difference(word1, word2) == 1:
+            letters = ""
+            for i in range(len(word1)):
+                if word1[i] == word2[i]:
+                    letters += word1[i]
+            return letters
+    return None
+
+
 def main() -> None:
     with Path(__file__).with_name("input.txt").open() as handle:
         words = list(map(str.strip, handle))
     print(part1(words))
+    print(part2(words))
 
 
 if __name__ == "__main__":
