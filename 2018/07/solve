@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+import re
+import typing as T
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Rule:
+    parent: str
+    child: str
+
+    @staticmethod
+    def from_line(line: str) -> "Rule":
+        parent, child = re.findall(r"\b[A-Z]\b", line)
+        return Rule(parent=parent, child=child)
+
+
+class Tree:
+    def __init__(self, rules: T.List[Rule]) -> None:
+        self.all_nodes: T.Set[str] = set(rule.child for rule in rules) | set(
+            rule.parent for rule in rules
+        )
+
+        self.parents: T.Dict[str, str] = defaultdict(str)
+        for rule in rules:
+            self.parents[rule.child] += rule.parent
+
+        self.children: T.Dict[str, str] = defaultdict(str)
+        for rule in rules:
+            self.children[rule.parent] += rule.child
+
+        self.roots: T.List[str] = [
+            node for node in self.all_nodes if node not in self.parents
+        ]
+
+
+def part1(rules: T.List[Rule]) -> str:
+    tree = Tree(rules)
+    ret = ""
+    available = set(tree.roots)
+
+    while available:
+        node = next(iter(sorted(available)))
+        available.remove(node)
+        ret += node
+        for child in tree.children[node]:
+            if all(parent in ret for parent in tree.parents[child]):
+                available.add(child)
+
+    return ret
+
+
+def main() -> None:
+    with Path(__file__).with_name("input.txt").open() as handle:
+        rules = list(map(Rule.from_line, handle))
+
+    print(part1(rules))
+
+
+if __name__ == "__main__":
+    main()
