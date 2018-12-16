@@ -14,6 +14,14 @@ class Claim:
     w: int
     h: int
 
+    @property
+    def x2(self) -> int:
+        return self.x + self.w
+
+    @property
+    def y2(self) -> int:
+        return self.y + self.h
+
     @staticmethod
     def from_string(line: str) -> "Claim":
         id_, x, y, w, h = list(map(int, re.findall(r"\d+", line)))
@@ -21,20 +29,40 @@ class Claim:
 
 
 def part1(claims: T.List[Claim]) -> int:
-    area = defaultdict(int)
+    area: T.Dict[T.Tuple[int, int], int] = defaultdict(int)
     for claim in claims:
-        for y in range(claim.y, claim.y + claim.h):
-            for x in range(claim.x, claim.x + claim.w):
+        for y in range(claim.y, claim.y2):
+            for x in range(claim.x, claim.x2):
                 area[x, y] += 1
     return sum(1 for num in area.values() if num >= 2)
+
+
+def part2(claims: T.List[Claim]) -> int:
+    area: T.Dict[T.Tuple[int, int], T.List[Claim]] = defaultdict(list)
+    for claim in claims:
+        for y in range(claim.y, claim.y2):
+            for x in range(claim.x, claim.x2):
+                area[x, y].append(claim)
+    singles: T.List[Claim] = []
+    for claim in claims:
+        single = True
+        for y in range(claim.y, claim.y2):
+            for x in range(claim.x, claim.x2):
+                if len(area[x, y]) > 1:
+                    single = False
+        if single:
+            singles.append(claim)
+    assert len(singles) == 1
+    return singles[0].id_
 
 
 def main() -> None:
     with Path(__file__).with_name("input.txt").open() as handle:
         claims = list(map(Claim.from_string, handle))
+
     print(part1(claims))
+    print(part2(claims))
 
 
 if __name__ == "__main__":
     main()
-
