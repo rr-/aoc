@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+from pathlib import Path
+
+
+def main() -> None:
+    with Path(__file__).with_name("input.txt").open() as handle:
+        print(sum(map(int, handle)))
+
+
+if __name__ == "__main__":
+    main()
