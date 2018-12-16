@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+import re
+import typing as T
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Instruction:
+    opcode: str
+    args: T.List[str]
+
+    @staticmethod
+    def from_line(line: str) -> None:
+        parts = re.split(",? ", line.strip())
+        return Instruction(opcode=parts[0], args=parts[1:])
+
+
+def part1(instructions: T.List[Instruction]) -> int:
+    eip = 0
+    registers = {"a": 0, "b": 0}
+    while 0 <= eip < len(instructions):
+        instruction = instructions[eip]
+        if instruction.opcode == "hlf":
+            registers[instruction.args[0]] //= 2
+            eip += 1
+        elif instruction.opcode == "tpl":
+            registers[instruction.args[0]] *= 3
+            eip += 1
+        elif instruction.opcode == "inc":
+            registers[instruction.args[0]] += 1
+            eip += 1
+        elif instruction.opcode == "jmp":
+            eip += int(instruction.args[0])
+        elif instruction.opcode == "jie":
+            if registers[instruction.args[0]] & 1 == 0:
+                eip += int(instruction.args[1])
+            else:
+                eip += 1
+        elif instruction.opcode == "jio":
+            if registers[instruction.args[0]] == 1:
+                eip += int(instruction.args[1])
+            else:
+                eip += 1
+        else:
+            raise NotImplementedError(f"not implemented: {instruction.opcode}")
+    return registers["b"]
+
+
+def main():
+    with Path(__file__).with_name("input.txt").open() as handle:
+        instructions = list(map(Instruction.from_line, handle))
+    print(part1(instructions))
+
+
+if __name__ == "__main__":
+    main()
