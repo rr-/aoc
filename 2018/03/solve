@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+import re
+import typing as T
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Claim:
+    id_: int
+    x: int
+    y: int
+    w: int
+    h: int
+
+    @staticmethod
+    def from_string(line: str) -> "Claim":
+        id_, x, y, w, h = list(map(int, re.findall(r"\d+", line)))
+        return Claim(id_=id_, x=x, y=y, w=w, h=h)
+
+
+def part1(claims: T.List[Claim]) -> int:
+    area = defaultdict(int)
+    for claim in claims:
+        for y in range(claim.y, claim.y + claim.h):
+            for x in range(claim.x, claim.x + claim.w):
+                area[x, y] += 1
+    return sum(1 for num in area.values() if num >= 2)
+
+
+def main() -> None:
+    with Path(__file__).with_name("input.txt").open() as handle:
+        claims = list(map(Claim.from_string, handle))
+    print(part1(claims))
+
+
+if __name__ == "__main__":
+    main()
+
