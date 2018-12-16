@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from collections import defaultdict
 from pathlib import Path
+
 from PIL import Image
 
 
@@ -35,7 +36,7 @@ def part1(chars):
     for char in chars:
         pos = go(pos, char)
         grid[pos] += 1
-    dump_grid(grid, 'part1.png')
+    dump_grid(grid, "part1.png")
     return sum(1 for pos in grid.keys() if grid[pos] >= 1)
 
 
@@ -50,7 +51,7 @@ def part2(chars):
         pos2 = go(pos2, char2)
         grid[pos1] += 1
         grid[pos2] += 1
-    dump_grid(grid, 'part2.png')
+    dump_grid(grid, "part2.png")
     return sum(1 for pos in grid.keys() if grid[pos] >= 1)
 
 

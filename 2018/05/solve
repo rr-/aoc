@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-import re
 import string
-import typing as T
 from pathlib import Path
 
 
@@ -22,7 +20,7 @@ def part1(source: str) -> int:
 
 def part2(source: str) -> int:
     return min(
-        len(react(source.replace(letter, '').replace(letter.upper(), '')))
+        len(react(source.replace(letter, "").replace(letter.upper(), "")))
         for letter in string.ascii_lowercase
     )
 

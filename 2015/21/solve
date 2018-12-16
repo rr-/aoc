@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-import typing as T
 import copy
 import itertools
 import re
+import typing as T
 from dataclasses import dataclass
 from pathlib import Path
 

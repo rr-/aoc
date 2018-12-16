@@ -73,9 +73,7 @@ def part1(coords: T.List[Coord]) -> int:
             closest = min(distances.keys())
 
             grid[x, y] = (
-                -1
-                if len(distances[closest]) != 1
-                else distances[closest][0]
+                -1 if len(distances[closest]) != 1 else distances[closest][0]
             )
 
     dump_grid(grid, Path("image.png"))
@@ -113,7 +111,7 @@ def part2(coords: T.List[Coord]) -> int:
         visited.add((x, y))
         if total_distance(x, y) < goal:
             area += 1
-        for dx, dy in [(- 1, 0), (1, 0), (0, -1), (0, +1)]:
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, +1)]:
             nx = x + dx
             ny = y + dy
             if (nx, ny) not in visited and total_distance(nx, ny) < goal:

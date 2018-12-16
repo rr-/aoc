@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import re
 import typing as T
-from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 

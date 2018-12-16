@@ -23,7 +23,7 @@ def part2(goal):
     for i in range(1, upper_bound + 1):
         for j, k in enumerate(range(i, upper_bound, i)):
             if j >= 50:
-                 break
+                break
             arr[k] += i * 11
     for i, value in enumerate(arr):
         if value >= goal:

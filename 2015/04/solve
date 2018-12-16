@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from pathlib import Path
 from hashlib import md5
 from itertools import count
+from pathlib import Path
 
 
 def get_hash(text):
@@ -12,6 +12,7 @@ def part1(word):
     for i in count(start=1):
         if get_hash(word + str(i)).startswith("0" * 5):
             return i
+
 
 def part2(word):
     for i in count(start=1):
