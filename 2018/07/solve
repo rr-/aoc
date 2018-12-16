@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import itertools
 import re
 import typing as T
 from collections import defaultdict
@@ -39,17 +40,67 @@ class Tree:
 def part1(rules: T.List[Rule]) -> str:
     tree = Tree(rules)
     ret = ""
-    available = set(tree.roots)
 
-    while available:
-        node = next(iter(sorted(available)))
-        available.remove(node)
-        ret += node
-        for child in tree.children[node]:
-            if all(parent in ret for parent in tree.parents[child]):
-                available.add(child)
+    while True:
+        available: T.Set[str] = set(
+            node
+            for node in tree.all_nodes
+            if (
+                node not in ret
+                and all(parent in ret for parent in tree.parents[node])
+            )
+        )
 
-    return ret
+        ret += next(iter(sorted(available)))
+        if len(ret) == len(tree.all_nodes):
+            return ret
+
+
+def part2(rules: T.List[Rule]) -> int:
+    MIN_WAIT = 60
+    WORKER_COUNT = 5
+
+    @dataclass
+    class Worker:
+        node: T.Optional[str]
+        wait: int
+
+    tree = Tree(rules)
+    ret = ""
+
+    workers = [Worker(None, wait=0) for _ in range(WORKER_COUNT)]
+
+    for seconds in itertools.count(1):
+        available: T.Set[str] = set(
+            node
+            for node in tree.all_nodes
+            if (
+                node not in ret
+                and all(parent in ret for parent in tree.parents[node])
+                and not any(worker.node == node for worker in workers)
+            )
+        )
+
+        for worker in workers:
+            if worker.wait == 0:
+                if not available:
+                    continue
+                node = next(iter(sorted(available)))
+                worker.node = node
+                worker.wait = MIN_WAIT + ord(node) - ord("A")
+                available.remove(node)
+            else:
+                worker.wait -= 1
+
+        for worker in workers:
+            if worker.wait == 0 and worker.node:
+                ret += worker.node
+                worker.node = None
+
+        if len(ret) == len(tree.all_nodes):
+            return seconds
+
+    assert False
 
 
 def main() -> None:
@@ -57,6 +108,7 @@ def main() -> None:
         rules = list(map(Rule.from_line, handle))
 
     print(part1(rules))
+    print(part2(rules))
 
 
 if __name__ == "__main__":
