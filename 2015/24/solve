@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+import functools
+import itertools
+import math
+import operator
+import typing as T
+from pathlib import Path
+
+
+def find_smallest_group1_size(sizes: T.List[int]) -> T.Optional[None]:
+    target = sum(sizes) // 3
+    for i in range(2, len(sizes)):
+        for comb in itertools.combinations(sizes, i):
+            if sum(comb) == target:
+                return i
+    return None
+
+
+def part1(sizes: T.List[int]) -> T.Optional[int]:
+    min_group1_size = find_smallest_group1_size(sizes)
+
+    print(min_group1_size)
+
+    target = sum(sizes) // 3
+    result = math.inf
+    for group in itertools.combinations(sizes, min_group1_size):
+        if sum(group) == target:
+            result = min(functools.reduce(operator.mul, group), result)
+    return result
+
+
+def main():
+    with Path(__file__).with_name("input.txt").open() as handle:
+        sizes = list(map(int, handle))
+    print(part1(sizes))
+
+
+if __name__ == "__main__":
+    main()
