@@ -10,8 +10,8 @@ def react(source: str) -> str:
     while True:
         last_len = len(source)
         for pair in zip(string.ascii_lowercase, string.ascii_uppercase):
-            source = source.replace(''.join(pair), '')
-            source = source.replace(''.join(reversed(pair)), '')
+            source = source.replace("".join(pair), "")
+            source = source.replace("".join(reversed(pair)), "")
         if last_len == len(source):
             return source
 
@@ -20,9 +20,17 @@ def part1(source: str) -> int:
     return len(react(source))
 
 
+def part2(source: str) -> int:
+    return min(
+        len(react(source.replace(letter, '').replace(letter.upper(), '')))
+        for letter in string.ascii_lowercase
+    )
+
+
 def main() -> None:
     source = Path(__file__).with_name("input.txt").read_text().strip()
     print(part1(source))
+    print(part2(source))
 
 
 if __name__ == "__main__":
