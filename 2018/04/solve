@@ -47,8 +47,7 @@ class Event:
         )
 
 
-def part1(events: T.List[Event]) -> int:
-    sleep_time: T.Dict[int, int] = defaultdict(int)
+def get_guard_minutes(events: T.List[Event]) -> T.Dict[T.Tuple[int, int], int]:
     guard_minutes: T.Dict[T.Tuple[int, int], int] = defaultdict(int)
     guard_id: int = -1
     fell_asleep_at: T.Optional[datetime.datetime] = None
@@ -61,15 +60,48 @@ def part1(events: T.List[Event]) -> int:
         elif event.event_type == EventType.wake_up:
             assert fell_asleep_at, event.date
             assert event.guard_id == guard_id
-            sleep_time[guard_id] += event.date.minute - fell_asleep_at.minute
             for minute in range(fell_asleep_at.minute, event.date.minute):
                 guard_minutes[guard_id, minute] += 1
             fell_asleep_at = None
             guard_id = -1
-    sleepiest_guard_id = max(sleep_time.items(), key=lambda kv: kv[1])[0]
+    return guard_minutes
+
+
+def get_sleep_times(
+    guard_minutes: T.Dict[T.Tuple[int, int], int]
+) -> T.Dict[int, int]:
+    sleep_times: T.Dict[int, int] = defaultdict(int)
+    for key, sleep_time in guard_minutes.items():
+        guard_id, _minute = key
+        sleep_times[guard_id] += sleep_time
+    return sleep_times
+
+
+def part1(events: T.List[Event]) -> int:
+    guard_minutes = get_guard_minutes(events)
+    sleep_times = get_sleep_times(guard_minutes)
+    sleepiest_guard_id = max(sleep_times.items(), key=lambda kv: kv[1])[0]
     safest_minute = max(
         range(60), key=lambda minute: guard_minutes[sleepiest_guard_id, minute]
     )
+    return sleepiest_guard_id * safest_minute
+
+
+def part2(events: T.List[Event]) -> int:
+    guard_minutes = get_guard_minutes(events)
+    guard_ids = set(event.guard_id for event in events)
+
+    sleep_time = 0
+    sleepiest_guard_id = 0
+    safest_minute = 0
+    for minute in range(60):
+        sleepiest_guard_id_for_minute = max(
+            guard_ids, key=lambda guard_id: guard_minutes[guard_id, minute]
+        )
+        if guard_minutes[sleepiest_guard_id_for_minute, minute] > sleep_time:
+            sleep_time = guard_minutes[sleepiest_guard_id_for_minute, minute]
+            sleepiest_guard_id = sleepiest_guard_id_for_minute
+            safest_minute = minute
     return sleepiest_guard_id * safest_minute
 
 
@@ -79,6 +111,7 @@ def main() -> None:
         for i, line in enumerate(sorted(handle)):
             events.append(Event.from_line(line, events[-1] if i else None))
     print(part1(events))
+    print(part2(events))
 
 
 if __name__ == "__main__":
