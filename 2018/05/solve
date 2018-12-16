@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+import re
+import string
+import typing as T
+from pathlib import Path
+
+
+def react(source: str) -> str:
+    last_len = 0
+    while True:
+        last_len = len(source)
+        for pair in zip(string.ascii_lowercase, string.ascii_uppercase):
+            source = source.replace(''.join(pair), '')
+            source = source.replace(''.join(reversed(pair)), '')
+        if last_len == len(source):
+            return source
+
+
+def part1(source: str) -> int:
+    return len(react(source))
+
+
+def main() -> None:
+    source = Path(__file__).with_name("input.txt").read_text().strip()
+    print(part1(source))
+
+
+if __name__ == "__main__":
+    main()
