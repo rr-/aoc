@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+import string
+import typing as T
+from pathlib import Path
+
+
+def has_repetitions(word: str, count: int) -> bool:
+    for letter in string.ascii_lowercase:
+        if word.count(letter) == count:
+            return True
+    return False
+
+
+def part1(words: T.List[str]) -> int:
+    twice = sum(1 for word in words if has_repetitions(word, 2))
+    thrice = sum(1 for word in words if has_repetitions(word, 3))
+    return twice * thrice
+
+
+def main() -> None:
+    with Path(__file__).with_name("input.txt").open() as handle:
+        words = list(map(str.strip, handle))
+    print(part1(words))
+
+
+if __name__ == "__main__":
+    main()
