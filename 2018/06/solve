@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+import re
+import typing as T
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Coord:
+    id_: int
+    x: int
+    y: int
+
+    _id = 0
+
+    @staticmethod
+    def from_line(line: str) -> "Coord":
+        x, y = map(int, re.findall(r"\d+", line))
+        ret = Coord(id_=Coord._id, x=x, y=y)
+        Coord._id += 1
+        return ret
+
+
+class Grid:
+    def __init__(self, coords: T.List[Coord]) -> None:
+        self.coords = coords
+        self.x1 = min(coord.x for coord in coords)
+        self.x2 = max(coord.x for coord in coords)
+        self.y1 = min(coord.y for coord in coords)
+        self.y2 = max(coord.y for coord in coords)
+        self._values: T.Dict[T.Tuple[int, int], int] = defaultdict(int)
+
+    def __setitem__(self, key: T.Tuple[int, int], value: int) -> None:
+        self._values[key] = value
+
+    def __getitem__(self, key: T.Tuple[int, int]) -> int:
+        return self._values[key]
+
+
+def dump_grid(grid: Grid, path: Path) -> None:
+    import random
+    from PIL import Image
+
+    img = Image.new(
+        "RGB", (grid.x2 + 1 - grid.x1, grid.y2 + 1 - grid.y1), "black"
+    )
+    pixels = img.load()
+    colors = {
+        coord.id_: tuple(random.randint(0, 255) for _ in range(3))
+        for coord in grid.coords
+    }
+    for x in range(grid.x1, grid.x2 + 1):
+        for y in range(grid.y1, grid.y2 + 1):
+            value = grid[x, y]
+            if value != -1:
+                pixels[x - grid.x1, y - grid.y1] = colors[value]
+    for coord in grid.coords:
+        pixels[coord.x - grid.x1, coord.y - grid.y1] = (0, 0, 0)
+    img.save(str(path), format="png")
+
+
+def part1(coords: T.List[Coord]) -> int:
+    grid = Grid(coords)
+    distances: T.Dict[int, T.List[Coord]] = defaultdict(list)
+    for y in range(grid.y1, grid.y2 + 1):
+        for x in range(grid.x1, grid.x2 + 1):
+            distances.clear()
+            for coord in coords:
+                distance = abs(coord.x - x) + abs(coord.y - y)
+                distances[distance].append(coord.id_)
+            closest = min(distances.keys())
+
+            grid[x, y] = (
+                -1
+                if len(distances[closest]) != 1
+                else distances[closest][0]
+            )
+
+    dump_grid(grid, Path("image.png"))
+
+    largest_area = 0
+    for coord in coords:
+        area = 0
+        ignore = False
+        for x in range(grid.x1, grid.x2 + 1):
+            for y in range(grid.y1, grid.y2 + 1):
+                if grid[x, y] == coord.id_:
+                    if x in {grid.x1, grid.x2} or y in {grid.y1, grid.y2}:
+                        ignore = True
+                    area += 1
+        if not ignore:
+            largest_area = max(area, largest_area)
+
+    return largest_area
+
+
+def main() -> None:
+    with Path(__file__).with_name("input.txt").open() as handle:
+        coords = list(map(Coord.from_line, handle))
+
+    print(part1(coords))
+
+
+if __name__ == "__main__":
+    main()
