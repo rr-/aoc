@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+import datetime
+import enum
+import re
+import typing as T
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+
+import dateutil.parser
+
+
+class EventType(enum.Enum):
+    begin_shift = 1
+    fall_asleep = 2
+    wake_up = 3
+
+
+@dataclass
+class Event:
+    date: datetime.datetime
+    text: str
+    guard_id: int
+    event_type: EventType
+
+    @staticmethod
+    def from_line(line: str, prev_event: T.Optional["Event"]) -> "Event":
+        line = line.strip()
+        match = re.match("\[([^\]]+)\]", line)
+        assert match
+        date = dateutil.parser.parse(match.group(1))
+        match = re.search("Guard #(\d+)", line)
+        if match:
+            guard_id = int(match.group(1))
+            event_type = EventType.begin_shift
+        else:
+            assert prev_event
+            guard_id = prev_event.guard_id
+            if "wakes up" in line:
+                event_type = EventType.wake_up
+            elif "falls asleep" in line:
+                event_type = EventType.fall_asleep
+            else:
+                assert False, "unknown event type"
+        return Event(
+            date=date, text=line, guard_id=guard_id, event_type=event_type
+        )
+
+
+def part1(events: T.List[Event]) -> int:
+    sleep_time: T.Dict[int, int] = defaultdict(int)
+    guard_minutes: T.Dict[T.Tuple[int, int], int] = defaultdict(int)
+    guard_id: int = -1
+    fell_asleep_at: T.Optional[datetime.datetime] = None
+    queue = events[:]
+    while queue:
+        event = queue.pop(0)
+        if event.event_type == EventType.fall_asleep:
+            fell_asleep_at = event.date
+            guard_id = event.guard_id
+        elif event.event_type == EventType.wake_up:
+            assert fell_asleep_at, event.date
+            assert event.guard_id == guard_id
+            sleep_time[guard_id] += event.date.minute - fell_asleep_at.minute
+            for minute in range(fell_asleep_at.minute, event.date.minute):
+                guard_minutes[guard_id, minute] += 1
+            fell_asleep_at = None
+            guard_id = -1
+    sleepiest_guard_id = max(sleep_time.items(), key=lambda kv: kv[1])[0]
+    safest_minute = max(
+        range(60), key=lambda minute: guard_minutes[sleepiest_guard_id, minute]
+    )
+    return sleepiest_guard_id * safest_minute
+
+
+def main() -> None:
+    with Path(__file__).with_name("input.txt").open() as handle:
+        events: T.List[Event] = []
+        for i, line in enumerate(sorted(handle)):
+            events.append(Event.from_line(line, events[-1] if i else None))
+    print(part1(events))
+
+
+if __name__ == "__main__":
+    main()
