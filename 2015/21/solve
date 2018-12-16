@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+import typing as T
+import copy
+import itertools
+import re
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Item:
+    name: str
+    cost: int
+    damage: int
+    armor: int
+
+
+@dataclass
+class Creature:
+    name: str
+    health: int
+    damage: int
+    armor: int
+
+
+WEAPONS = [
+    Item(name="Dagger", cost=8, damage=4, armor=0),
+    Item(name="Shortsword", cost=10, damage=5, armor=0),
+    Item(name="Warhammer", cost=25, damage=6, armor=0),
+    Item(name="Longsword", cost=40, damage=7, armor=0),
+    Item(name="Greataxe", cost=74, damage=8, armor=0),
+]
+
+ARMORS = [
+    Item(name="Leather", cost=13, damage=0, armor=1),
+    Item(name="Chainmail", cost=31, damage=0, armor=2),
+    Item(name="Splintmail", cost=53, damage=0, armor=3),
+    Item(name="Bandedmail", cost=75, damage=0, armor=4),
+    Item(name="Platemail", cost=102, damage=0, armor=5),
+]
+
+RINGS = [
+    Item(name="Damage +1", cost=25, damage=1, armor=0),
+    Item(name="Damage +2", cost=50, damage=2, armor=0),
+    Item(name="Damage +3", cost=100, damage=3, armor=0),
+    Item(name="Defense +1", cost=20, damage=0, armor=1),
+    Item(name="Defense +2", cost=40, damage=0, armor=2),
+    Item(name="Defense +3", cost=80, damage=0, armor=3),
+]
+
+
+def battle(player: Creature, boss: Creature) -> bool:
+    player = copy.deepcopy(player)
+    boss = copy.deepcopy(boss)
+    queue = [player, boss]
+    while True:
+        queue[1].health -= max(1, queue[0].damage - queue[1].armor)
+        if player.health <= 0:
+            return False
+        if boss.health <= 0:
+            return True
+        queue.append(queue.pop(0))
+
+
+def generate_items() -> T.Iterable[T.List[Item]]:
+    for weapon in WEAPONS:
+        for armor in ARMORS + [None]:
+            for ring1, ring2 in itertools.combinations(RINGS + [None], 2):
+                items = [weapon, armor, ring1, ring2]
+                yield [item for item in items if item is not None]
+
+
+def part1(boss: Creature) -> int:
+    min_cost = 9_999_999
+    for items in generate_items():
+        player = Creature(
+            name="Player",
+            health=100,
+            damage=sum(item.damage for item in items),
+            armor=sum(item.armor for item in items),
+        )
+        if battle(player, boss):
+            total_cost = sum(item.cost for item in items)
+            min_cost = min(min_cost, total_cost)
+    return min_cost
+
+
+def main():
+    text = Path(__file__).with_name("input.txt").read_text()
+    numbers = list(map(int, re.findall(r"\d+", text)))
+
+    boss = Creature(
+        name="Boss", health=numbers[0], damage=numbers[1], armor=numbers[2]
+    )
+    print(part1(boss))
+
+
+if __name__ == "__main__":
+    main()
