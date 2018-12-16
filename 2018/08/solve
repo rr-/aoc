@@ -10,9 +10,21 @@ class Node:
         self.children = [Node(numbers) for _ in range(child_count)]
         self.meta = [numbers.pop(0) for _ in range(meta_count)]
 
+    @property
+    def value(self) -> int:
+        if not self.children:
+            return sum(self.meta)
+        ret = 0
+        for idx in self.meta:
+            try:
+                ret += self.children[idx - 1].value
+            except IndexError:
+                pass
+        return ret
+
 
 def part1(numbers: T.List[int]) -> int:
-    root = Node(numbers)
+    root = Node(numbers[:])
     stack = [root]
     total = 0
     while stack:
@@ -22,11 +34,17 @@ def part1(numbers: T.List[int]) -> int:
     return total
 
 
+def part2(numbers: T.List[int]) -> int:
+    root = Node(numbers[:])
+    return root.value
+
+
 def main() -> None:
     text = Path(__file__).with_name("input.txt").read_text()
     numbers = list(map(int, text.strip().split()))
 
     print(part1(numbers))
+    print(part2(numbers))
 
 
 if __name__ == "__main__":
