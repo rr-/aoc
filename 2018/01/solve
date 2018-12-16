@@ -1,10 +1,28 @@
 #!/usr/bin/env python3
+import typing as T
 from pathlib import Path
+
+
+def part1(numbers: T.List[int]) -> int:
+    return sum(numbers)
+
+
+def part2(numbers: T.List[int]) -> int:
+    total = 0
+    seen = set([total])
+    while True:
+        for num in numbers:
+            total += num
+            if total in seen:
+                return total
+            seen.add(total)
 
 
 def main() -> None:
     with Path(__file__).with_name("input.txt").open() as handle:
-        print(sum(map(int, handle)))
+        numbers = list(map(int, handle))
+    print(part1(numbers))
+    print(part2(numbers))
 
 
 if __name__ == "__main__":
