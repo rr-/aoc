@@ -85,6 +85,21 @@ def part1(boss: Creature) -> int:
     return min_cost
 
 
+def part2(boss: Creature) -> int:
+    max_cost = 0
+    for items in generate_items():
+        player = Creature(
+            name="Player",
+            health=100,
+            damage=sum(item.damage for item in items),
+            armor=sum(item.armor for item in items),
+        )
+        if not battle(player, boss):
+            total_cost = sum(item.cost for item in items)
+            max_cost = max(max_cost, total_cost)
+    return max_cost
+
+
 def main():
     text = Path(__file__).with_name("input.txt").read_text()
     numbers = list(map(int, re.findall(r"\d+", text)))
@@ -93,6 +108,7 @@ def main():
         name="Boss", health=numbers[0], damage=numbers[1], armor=numbers[2]
     )
     print(part1(boss))
+    print(part2(boss))
 
 
 if __name__ == "__main__":
