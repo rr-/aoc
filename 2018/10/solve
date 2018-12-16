@@ -61,9 +61,8 @@ def rate_rules(rules: T.List[Rule], elapsed: int) -> float:
     return (w + h) / 2
 
 
-def part1(rules: T.List[Rule]) -> int:
+def find_best_time(rules: T.List[Rule]) -> int:
     delta = 5000
-
     elapsed = 0
     best_rating = rate_rules(rules, 0)
     while True:
@@ -78,7 +77,16 @@ def part1(rules: T.List[Rule]) -> int:
         else:
             delta //= 2
             if delta == 0:
-                return dump_grid(apply_rules(rules, elapsed))
+                return elapsed
+
+
+def part1(rules: T.List[Rule]) -> str:
+    elapsed = find_best_time(rules)
+    return dump_grid(apply_rules(rules, elapsed))
+
+
+def part2(rules: T.List[Rule]) -> int:
+    return find_best_time(rules)
 
 
 def main() -> None:
@@ -86,6 +94,7 @@ def main() -> None:
         rules = list(map(Rule.from_line, handle))
 
     print(part1(rules))
+    print(part2(rules))
 
 
 if __name__ == "__main__":
