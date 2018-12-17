@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+import enum
+import itertools
+import typing as T
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+
+PLAYER_LEFT = "<"
+PLAYER_RIGHT = ">"
+PLAYER_UP = "^"
+PLAYER_DOWN = "v"
+PLAYER_DIRS = {PLAYER_LEFT, PLAYER_RIGHT, PLAYER_UP, PLAYER_DOWN}
+TRACK_TURN_SLASH = "/"
+TRACK_TURN_BACKSLASH = "\\"
+TRACK_HORIZONTAL = "-"
+TRACK_VERTICAL = "|"
+TRACK_INTERSECTION = "+"
+
+
+RULES: T.Dict[T.Union[T.Tuple[str, str], T.Tuple[str, str, int]], str] = {
+    (">", "\\"): "v",
+    ("^", "\\"): "<",
+    ("v", "\\"): ">",
+    ("<", "\\"): "^",
+    (">", "/"): "^",
+    ("^", "/"): ">",
+    ("v", "/"): "<",
+    ("<", "/"): "v",
+    (">", "+", 0): "^",
+    ("^", "+", 0): "<",
+    ("<", "+", 0): "v",
+    ("v", "+", 0): ">",
+    (">", "+", 1): ">",
+    ("^", "+", 1): "^",
+    ("<", "+", 1): "<",
+    ("v", "+", 1): "v",
+    (">", "+", 2): "v",
+    ("^", "+", 2): ">",
+    ("<", "+", 2): "^",
+    ("v", "+", 2): "<",
+}
+
+
+@dataclass
+class Player:
+    x: int
+    y: int
+    direction: str
+    turn_counter = 0
+
+    def reflect_slash(self) -> None:
+        self.direction = {
+            PLAYER_RIGHT: PLAYER_UP,
+            PLAYER_UP: PLAYER_LEFT,
+            PLAYER_DOWN: PLAYER_RIGHT,
+            PLAYER_LEFT: PLAYER_DOWN,
+        }[self.direction]
+
+    def reflect_backslash(self) -> None:
+        self.direction = {
+            PLAYER_RIGHT: PLAYER_UP,
+            PLAYER_UP: PLAYER_LEFT,
+            PLAYER_DOWN: PLAYER_RIGHT,
+            PLAYER_LEFT: PLAYER_DOWN,
+        }[self.direction]
+
+    def turn_left(self) -> None:
+        self.direction = {
+            PLAYER_RIGHT: PLAYER_UP,
+            PLAYER_UP: PLAYER_RIGHT,
+            PLAYER_DOWN: PLAYER_LEFT,
+            PLAYER_LEFT: PLAYER_DOWN,
+        }[self.direction]
+
+    def turn_right(self) -> None:
+        self.direction = {
+            PLAYER_RIGHT: PLAYER_DOWN,
+            PLAYER_UP: PLAYER_LEFT,
+            PLAYER_DOWN: PLAYER_RIGHT,
+            PLAYER_LEFT: PLAYER_UP,
+        }[self.direction]
+
+
+class Grid:
+    def __init__(self, text: str) -> None:
+        lines = text.strip().split("\n")
+        self.h = len(lines)
+        self.w = max(map(len, lines))
+
+        self.cells = np.array(
+            list("".join(line.ljust(self.w) for line in lines))
+        ).reshape(self.h, self.w)
+
+        self.players: T.List[Player] = []
+
+        for y in range(self.h):
+            for x in range(self.w):
+                cell = self.cells[y, x]
+                if cell in PLAYER_DIRS:
+                    self.players.append(Player(x=x, y=y, direction=cell))
+                    self.cells[y, x] = (
+                        TRACK_VERTICAL
+                        if cell in {PLAYER_UP, PLAYER_DOWN}
+                        else TRACK_HORIZONTAL
+                    )
+
+    def tick(self) -> None:
+        for player in sorted(
+            self.players, key=lambda player: (player.y, player.x)
+        ):
+            if player.direction == PLAYER_LEFT:
+                player.x -= 1
+            if player.direction == PLAYER_RIGHT:
+                player.x += 1
+            if player.direction == PLAYER_UP:
+                player.y -= 1
+            if player.direction == PLAYER_DOWN:
+                player.y += 1
+            cell = self.cells[player.y, player.x]
+            if (player.direction, cell) in RULES:
+                player.direction = RULES[player.direction, cell]
+            elif (player.direction, cell, player.turn_counter) in RULES:
+                player.direction = RULES[
+                    player.direction, cell, player.turn_counter
+                ]
+                player.turn_counter += 1
+                player.turn_counter %= 3
+
+    def __str__(self) -> str:
+        lines = [list(self.cells[y]) for y in range(self.h)]
+        for player in self.players:
+            lines[player.y][player.x] = player.direction
+        return "\n".join("".join(line) for line in lines)
+
+
+def part1(grid: Grid) -> T.Tuple[int, int]:
+    while True:
+        grid.tick()
+        for p1, p2 in itertools.combinations(grid.players, 2):
+            if p1.x == p2.x and p1.y == p2.y:
+                return p1.x, p1.y
+
+
+def main() -> None:
+    text = Path(__file__).with_name("input.txt").read_text()
+    grid = Grid(text)
+
+    x, y = part1(grid)
+    print(f"{x},{y}")
+
+
+if __name__ == "__main__":
+    main()
