@@ -1,38 +1,8 @@
 #!/usr/bin/env python3
-import copy
 import typing as T
 from pathlib import Path
 
-
-class Generation:
-    def __init__(self, states: T.Optional[T.Dict[int, bool]] = None) -> None:
-        self.states = states or {}
-
-    def __getitem__(self, x: int) -> bool:
-        return self.states.get(x, False)
-
-    def __setitem__(self, x: int, value: bool) -> None:
-        if value:
-            self.states[x] = value
-        else:
-            del self.states[x]
-
-    @property
-    def min(self) -> int:
-        return min(list(self.states.keys()) + [0])
-
-    @property
-    def max(self) -> int:
-        return max(list(self.states.keys()) + [0])
-
-    @property
-    def alive(self) -> int:
-        return sum(1 for x in self.states.values() if x)
-
-    def __str__(self) -> str:
-        return "".join(
-            "#" if self[x] else "-" for x in range(self.min, self.max + 1)
-        )
+import numpy as np
 
 
 def to_bool(text: str) -> T.List[bool]:
@@ -44,33 +14,61 @@ def rule_from_line(text: str) -> T.Tuple[T.Tuple[bool], bool]:
     return (tuple(to_bool(source)), to_bool(target)[0])
 
 
-def part1(initial: Generation, rules: T.Dict[T.Tuple[bool], bool]) -> int:
-    GENERATIONS = 20
-    neighbours = len(list(rules.keys())[0]) // 2
+def simulate(
+    initial: T.List[bool], rules: T.Dict[T.Tuple[bool], bool], generations: int
+) -> int:
+    length = len(list(rules.keys())[0])
+    neighbours = length // 2
 
-    gen = copy.deepcopy(initial)
-    for _ in range(GENERATIONS):
-        new_gen = Generation()
-        for i in range(gen.min - neighbours, gen.max + neighbours + 1):
-            source_proximity = tuple(
-                gen[i + j] for j in range(-neighbours, neighbours + 1)
-            )
-            new_state = rules.get(source_proximity, False)
-            if new_state:
-                new_gen[i] = True
-        gen = new_gen
-    return sum(key for key in gen.states.keys() if gen[key])
+    rules = {tuple(map(int, key)): int(value) for key, value in rules.items()}
+    prev_state = [1 if x else 0 for x in initial]
+
+    offset = 0
+    for turn in range(generations):
+        prev_offset = offset
+        prev_state = [0] * length + prev_state + [0] * length
+        new_state = [0] * len(prev_state)
+        offset += length
+
+        for i in range(neighbours, len(prev_state) - neighbours - 1):
+            pattern = tuple(prev_state[i - neighbours : i + neighbours + 1])
+            new_state[i] = rules.get(pattern, 0)
+
+        new_state = np.trim_zeros(new_state, "f")
+        offset += len(new_state) - len(prev_state)
+        new_state = np.trim_zeros(new_state, "b")
+        prev_state = np.trim_zeros(prev_state)
+
+        if np.array_equal(prev_state, new_state):
+            diff_offset = offset - prev_offset
+            offset += diff_offset * (generations - turn - 1)
+            break
+
+        prev_state = new_state
+
+    return sum(i for i, x in enumerate(prev_state, -offset) if x)
+
+
+def part1(
+    initial: T.Dict[int, bool], rules: T.Dict[T.Tuple[bool], bool]
+) -> int:
+    return simulate(initial, rules, 20)
+
+
+def part2(
+    initial: T.Dict[int, bool], rules: T.Dict[T.Tuple[bool], bool]
+) -> int:
+    return simulate(initial, rules, 50_000_000_000)
 
 
 def main() -> None:
     with Path(__file__).with_name("input.txt").open() as handle:
         lines = [line for line in map(str.strip, handle) if line]
-        initial = Generation(
-            dict(enumerate(to_bool(lines[0].split(":")[1].strip())))
-        )
+        initial = list(to_bool(lines[0].split(":")[1].strip()))
         rules = dict(map(rule_from_line, lines[1:]))
 
     print(part1(initial, rules))
+    print(part2(initial, rules))
 
 
 if __name__ == "__main__":
