@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+import copy
+import typing as T
+from pathlib import Path
+
+
+class Generation:
+    def __init__(self, states: T.Optional[T.Dict[int, bool]] = None) -> None:
+        self.states = states or {}
+
+    def __getitem__(self, x: int) -> bool:
+        return self.states.get(x, False)
+
+    def __setitem__(self, x: int, value: bool) -> None:
+        if value:
+            self.states[x] = value
+        else:
+            del self.states[x]
+
+    @property
+    def min(self) -> int:
+        return min(list(self.states.keys()) + [0])
+
+    @property
+    def max(self) -> int:
+        return max(list(self.states.keys()) + [0])
+
+    @property
+    def alive(self) -> int:
+        return sum(1 for x in self.states.values() if x)
+
+    def __str__(self) -> str:
+        return "".join(
+            "#" if self[x] else "-" for x in range(self.min, self.max + 1)
+        )
+
+
+def to_bool(text: str) -> T.List[bool]:
+    return list(x == "#" for x in text)
+
+
+def rule_from_line(text: str) -> T.Tuple[T.Tuple[bool], bool]:
+    source, target = text.split(" => ")
+    return (tuple(to_bool(source)), to_bool(target)[0])
+
+
+def part1(initial: Generation, rules: T.Dict[T.Tuple[bool], bool]) -> int:
+    GENERATIONS = 20
+    neighbours = len(list(rules.keys())[0]) // 2
+
+    gen = copy.deepcopy(initial)
+    for _ in range(GENERATIONS):
+        new_gen = Generation()
+        for i in range(gen.min - neighbours, gen.max + neighbours + 1):
+            source_proximity = tuple(
+                gen[i + j] for j in range(-neighbours, neighbours + 1)
+            )
+            new_state = rules.get(source_proximity, False)
+            if new_state:
+                new_gen[i] = True
+        gen = new_gen
+    return sum(key for key in gen.states.keys() if gen[key])
+
+
+def main() -> None:
+    with Path(__file__).with_name("input.txt").open() as handle:
+        lines = [line for line in map(str.strip, handle) if line]
+        initial = Generation(
+            dict(enumerate(to_bool(lines[0].split(":")[1].strip())))
+        )
+        rules = dict(map(rule_from_line, lines[1:]))
+
+    print(part1(initial, rules))
+
+
+if __name__ == "__main__":
+    main()
