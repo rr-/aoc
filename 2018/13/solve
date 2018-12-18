@@ -1,159 +1,132 @@
 #!/usr/bin/env python3
-import copy
-import enum
 import itertools
 import typing as T
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 
-import numpy as np
-
-PLAYER_LEFT = "<"
-PLAYER_RIGHT = ">"
-PLAYER_UP = "^"
-PLAYER_DOWN = "v"
-PLAYER_DIRS = {PLAYER_LEFT, PLAYER_RIGHT, PLAYER_UP, PLAYER_DOWN}
+CART_LEFT = "<"
+CART_RIGHT = ">"
+CART_UP = "^"
+CART_DOWN = "v"
+CART_DIRS = {CART_LEFT, CART_RIGHT, CART_UP, CART_DOWN}
 TRACK_TURN_SLASH = "/"
 TRACK_TURN_BACKSLASH = "\\"
-TRACK_HORIZONTAL = "-"
-TRACK_VERTICAL = "|"
-TRACK_INTERSECTION = "+"
+TRACK_HORZ = "-"
+TRACK_VERT = "|"
+TRACK_CROSS = "+"
 
-
-RULES: T.Dict[T.Union[T.Tuple[str, str], T.Tuple[str, str, int]], str] = {
-    (">", "\\"): "v",
-    ("^", "\\"): "<",
-    ("v", "\\"): ">",
-    ("<", "\\"): "^",
-    (">", "/"): "^",
-    ("^", "/"): ">",
-    ("v", "/"): "<",
-    ("<", "/"): "v",
-    (">", "+", 0): "^",
-    ("^", "+", 0): "<",
-    ("<", "+", 0): "v",
-    ("v", "+", 0): ">",
-    (">", "+", 1): ">",
-    ("^", "+", 1): "^",
-    ("<", "+", 1): "<",
-    ("v", "+", 1): "v",
-    (">", "+", 2): "v",
-    ("^", "+", 2): ">",
-    ("<", "+", 2): "^",
-    ("v", "+", 2): "<",
+RULES: T.Dict[T.Union[T.Tuple[str, str], T.Tuple[str, int, str]], str] = {
+    (TRACK_HORZ, CART_RIGHT): CART_RIGHT,
+    (TRACK_HORZ, CART_LEFT): CART_LEFT,
+    (TRACK_VERT, CART_UP): CART_UP,
+    (TRACK_VERT, CART_DOWN): CART_DOWN,
+    (TRACK_TURN_BACKSLASH, CART_RIGHT): CART_DOWN,
+    (TRACK_TURN_BACKSLASH, CART_UP): CART_LEFT,
+    (TRACK_TURN_BACKSLASH, CART_DOWN): CART_RIGHT,
+    (TRACK_TURN_BACKSLASH, CART_LEFT): CART_UP,
+    (TRACK_TURN_SLASH, CART_RIGHT): CART_UP,
+    (TRACK_TURN_SLASH, CART_UP): CART_RIGHT,
+    (TRACK_TURN_SLASH, CART_DOWN): CART_LEFT,
+    (TRACK_TURN_SLASH, CART_LEFT): CART_DOWN,
+    (TRACK_CROSS, 0, CART_RIGHT): CART_UP,
+    (TRACK_CROSS, 0, CART_UP): CART_LEFT,
+    (TRACK_CROSS, 0, CART_LEFT): CART_DOWN,
+    (TRACK_CROSS, 0, CART_DOWN): CART_RIGHT,
+    (TRACK_CROSS, 1, CART_RIGHT): CART_RIGHT,
+    (TRACK_CROSS, 1, CART_UP): CART_UP,
+    (TRACK_CROSS, 1, CART_LEFT): CART_LEFT,
+    (TRACK_CROSS, 1, CART_DOWN): CART_DOWN,
+    (TRACK_CROSS, 2, CART_RIGHT): CART_DOWN,
+    (TRACK_CROSS, 2, CART_UP): CART_RIGHT,
+    (TRACK_CROSS, 2, CART_LEFT): CART_UP,
+    (TRACK_CROSS, 2, CART_DOWN): CART_LEFT,
 }
 
 
 @dataclass
-class Player:
+class Cart:
+    num: int
     x: int
     y: int
     direction: str
     turn_counter = 0
 
-    def reflect_slash(self) -> None:
-        self.direction = {
-            PLAYER_RIGHT: PLAYER_UP,
-            PLAYER_UP: PLAYER_LEFT,
-            PLAYER_DOWN: PLAYER_RIGHT,
-            PLAYER_LEFT: PLAYER_DOWN,
-        }[self.direction]
+    def move(self) -> None:
+        if self.direction == CART_LEFT:
+            self.x -= 1
+        elif self.direction == CART_RIGHT:
+            self.x += 1
+        elif self.direction == CART_UP:
+            self.y -= 1
+        elif self.direction == CART_DOWN:
+            self.y += 1
+        else:
+            assert False
 
-    def reflect_backslash(self) -> None:
-        self.direction = {
-            PLAYER_RIGHT: PLAYER_UP,
-            PLAYER_UP: PLAYER_LEFT,
-            PLAYER_DOWN: PLAYER_RIGHT,
-            PLAYER_LEFT: PLAYER_DOWN,
-        }[self.direction]
-
-    def turn_left(self) -> None:
-        self.direction = {
-            PLAYER_RIGHT: PLAYER_UP,
-            PLAYER_UP: PLAYER_RIGHT,
-            PLAYER_DOWN: PLAYER_LEFT,
-            PLAYER_LEFT: PLAYER_DOWN,
-        }[self.direction]
-
-    def turn_right(self) -> None:
-        self.direction = {
-            PLAYER_RIGHT: PLAYER_DOWN,
-            PLAYER_UP: PLAYER_LEFT,
-            PLAYER_DOWN: PLAYER_RIGHT,
-            PLAYER_LEFT: PLAYER_UP,
-        }[self.direction]
+    def turn(self, cell: str) -> None:
+        if (cell, self.direction) in RULES:
+            self.direction = RULES[cell, self.direction]
+        elif (cell, self.turn_counter, self.direction) in RULES:
+            self.direction = RULES[cell, self.turn_counter, self.direction]
+            self.turn_counter = (self.turn_counter + 1) % 3
+        else:
+            assert False, str(self) + f"\n{self} hit cell of type '{cell}'"
 
 
 class Grid:
     def __init__(self, text: str) -> None:
-        lines = text.strip().split("\n")
+        lines = text.rstrip("\n").split("\n")
         self.h = len(lines)
         self.w = max(map(len, lines))
+        self.cells: T.Dict[T.Tuple[int, int], str] = {}
+        self.carts: T.List[Cart] = []
 
-        self.cells = np.array(
-            list("".join(line.ljust(self.w) for line in lines))
-        ).reshape(self.h, self.w)
-
-        self.players: T.List[Player] = []
-
-        for y in range(self.h):
-            for x in range(self.w):
-                cell = self.cells[y, x]
-                if cell in PLAYER_DIRS:
-                    self.players.append(Player(x=x, y=y, direction=cell))
-                    self.cells[y, x] = (
-                        TRACK_VERTICAL
-                        if cell in {PLAYER_UP, PLAYER_DOWN}
-                        else TRACK_HORIZONTAL
-                    )
-
-    def tick(self) -> None:
-        for player in sorted(
-            self.players, key=lambda player: (player.y, player.x)
-        ):
-            if player.direction == PLAYER_LEFT:
-                player.x -= 1
-            if player.direction == PLAYER_RIGHT:
-                player.x += 1
-            if player.direction == PLAYER_UP:
-                player.y -= 1
-            if player.direction == PLAYER_DOWN:
-                player.y += 1
-            cell = self.cells[player.y, player.x]
-            if (player.direction, cell) in RULES:
-                player.direction = RULES[player.direction, cell]
-            elif (player.direction, cell, player.turn_counter) in RULES:
-                player.direction = RULES[
-                    player.direction, cell, player.turn_counter
-                ]
-                player.turn_counter += 1
-                player.turn_counter %= 3
-
-    def __str__(self) -> str:
-        lines = [list(self.cells[y]) for y in range(self.h)]
-        for player in self.players:
-            lines[player.y][player.x] = player.direction
-        return "\n".join("".join(line) for line in lines)
+        for y, x in itertools.product(range(self.h), range(self.w)):
+            self.cells[y, x] = cell = lines[y][x]
+            if cell not in CART_DIRS:
+                continue
+            self.carts.append(
+                Cart(num=len(self.carts), x=x, y=y, direction=cell)
+            )
+            self.cells[y, x] = (
+                TRACK_VERT if cell in {CART_UP, CART_DOWN} else TRACK_HORZ
+            )
 
 
 def part1(grid: Grid) -> T.Tuple[int, int]:
-    grid = copy(grid)
+    grid = deepcopy(grid)
     while True:
-        grid.tick()
-        for p1, p2 in itertools.combinations(grid.players, 2):
-            if p1.x == p2.x and p1.y == p2.y:
-                return p1.x, p1.y
+        for cart in grid.carts:
+            cart.move()
+            for p1, p2 in itertools.combinations(grid.carts, 2):
+                if p1 != p2 and p1.x == p2.x and p1.y == p2.y:
+                    return p1.x, p1.y
+            cart.turn(grid.cells[cart.y, cart.x])
 
 
 def part2(grid: Grid) -> T.Tuple[int, int]:
-    grid = copy(grid)
-    while len(grid.players) > 1:
-        grid.tick()
-        for p1, p2 in itertools.combinations(grid.players, 2):
-            if p1.x == p2.x and p1.y == p2.y:
-                grid.players.remove(p1)
-                grid.players.remove(p2)
-    return grid.players[0].x, grid.players[0].y
+    grid = deepcopy(grid)
+
+    while len(grid.carts) > 1:
+        dead: T.Set[int] = set()
+        for cart in sorted(grid.carts, key=lambda p: (p.y, p.x)):
+            if cart.num in dead:
+                continue
+            cart.move()
+            for other in grid.carts:
+                if (
+                    cart.num != other.num
+                    and cart.x == other.x
+                    and cart.y == other.y
+                    and not other.num in dead
+                ):
+                    dead.update({cart.num, other.num})
+            if cart.num not in dead:
+                cart.turn(grid.cells[cart.y, cart.x])
+        grid.carts = [p for p in grid.carts if not p.num in dead]
+
+    return grid.carts[0].x, grid.carts[0].y
 
 
 def main() -> None:
