@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-from copy import copy
 import enum
 import re
 import typing as T
+from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,7 +30,7 @@ class Opcode(enum.IntEnum):
 
 @dataclass
 class Instruction:
-    opcode: int
+    opcode_num: int
     arg1: int
     arg2: int
     out: int
@@ -38,15 +38,15 @@ class Instruction:
 
 @dataclass
 class Sample:
-    before: T.Tuple[int, ...]
-    after: T.Tuple[int, ...]
+    before: T.List[int]
+    after: T.List[int]
     instruction: Instruction
 
 
 def calc(
     registers: T.List[int], opcode: Opcode, arg1: int, arg2: int, out: int
 ) -> None:
-    registers[out] = {
+    opcode_func: T.Dict[Opcode, T.Callable[[int, int], int]] = {
         Opcode.addr: lambda a, b: registers[a] + registers[b],
         Opcode.addi: lambda a, b: registers[a] + b,
         Opcode.mulr: lambda a, b: registers[a] * registers[b],
@@ -63,11 +63,14 @@ def calc(
         Opcode.eqir: lambda a, b: int(a == registers[b]),
         Opcode.eqri: lambda a, b: int(registers[a] == b),
         Opcode.eqrr: lambda a, b: int(registers[a] == registers[b]),
-    }[opcode](arg1, arg2)
+    }
+    registers[out] = opcode_func[opcode](arg1, arg2)
 
 
-def find_matching_opcodes(sample: Sample) -> T.Iterable[Opcode]:
-    for opcode in Opcode:
+def find_matching_opcodes(
+    sample: Sample, remaining: T.Iterable[Opcode]
+) -> T.Iterable[Opcode]:
+    for opcode in remaining:
         registers = copy(sample.before)
         calc(
             registers,
@@ -79,13 +82,53 @@ def find_matching_opcodes(sample: Sample) -> T.Iterable[Opcode]:
         if registers == sample.after:
             yield opcode
 
+
+def figure_opcode_mapping(samples: T.List[Sample]) -> T.Dict[int, Opcode]:
+    confirmed: T.Dict[int, Opcode] = {}
+    remaining: T.Set[Opcode] = set(Opcode)
+
+    while remaining:
+        product: T.Dict[int, T.Set[Opcode]] = {}
+        for sample in samples:
+            opcodes = list(find_matching_opcodes(sample, remaining))
+            if sample.instruction.opcode_num in product:
+                product[sample.instruction.opcode_num].intersection_update(
+                    set(opcodes)
+                )
+            else:
+                product[sample.instruction.opcode_num] = set(opcodes)
+
+        for num, possible_opcodes in product.items():
+            if len(possible_opcodes) == 1:
+                to_remove = next(iter(possible_opcodes))
+                remaining.discard(to_remove)
+                confirmed[num] = to_remove
+
+    return confirmed
+
+
 def part1(samples: T.List[Sample]) -> int:
     total = 0
     for sample in samples:
-        opcodes = list(find_matching_opcodes(sample))
+        opcodes = list(find_matching_opcodes(sample, set(Opcode)))
         if len(opcodes) >= 3:
             total += 1
     return total
+
+
+def part2(samples: T.List[Sample], instructions: T.List[Instruction]) -> int:
+    num_to_opcode = figure_opcode_mapping(samples)
+
+    registers = [0] * REGISTER_COUNT
+    for instruction in instructions:
+        calc(
+            registers,
+            num_to_opcode[instruction.opcode_num],
+            instruction.arg1,
+            instruction.arg2,
+            instruction.out,
+        )
+    return registers[0]
 
 
 def get_numbers(text: str) -> T.List[int]:
@@ -95,7 +138,7 @@ def get_numbers(text: str) -> T.List[int]:
 def parse_instruction(text: str) -> Instruction:
     numbers = get_numbers(text)
     return Instruction(
-        opcode=numbers[0], arg1=numbers[1], arg2=numbers[2], out=numbers[3]
+        opcode_num=numbers[0], arg1=numbers[1], arg2=numbers[2], out=numbers[3]
     )
 
 
@@ -125,10 +168,10 @@ def parse_input_file(
 
 def main() -> None:
     text = Path(__file__).with_name("input.txt").read_text()
-    #text = "Before: [3, 2, 1, 1]\n9 2 1 2\nAfter:  [3, 2, 2, 1]\n\n\n\n"
     samples, instructions = parse_input_file(text)
 
     print(part1(samples))
+    print(part2(samples, instructions))
 
 
 if __name__ == "__main__":
