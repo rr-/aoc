@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+from copy import copy
+import enum
+import re
+import typing as T
+from dataclasses import dataclass
+from pathlib import Path
+
+REGISTER_COUNT = 4
+
+
+class Opcode(enum.IntEnum):
+    addr = enum.auto()  # add register
+    addi = enum.auto()  # add immediate
+    mulr = enum.auto()  # multiply register
+    muli = enum.auto()  # multiply immediate
+    banr = enum.auto()  # bitwise AND register
+    bani = enum.auto()  # bitwise AND immediate
+    borr = enum.auto()  # bitwise OR register
+    bori = enum.auto()  # bitwise OR immediate
+    setr = enum.auto()  # set register
+    seti = enum.auto()  # set immediate
+    gtir = enum.auto()  # greater-than immediate/register
+    gtri = enum.auto()  # greater-than register/immediate
+    gtrr = enum.auto()  # greater-than register/register
+    eqir = enum.auto()  # equal immediate/register
+    eqri = enum.auto()  # equal register/immediate
+    eqrr = enum.auto()  # equal register/register
+
+
+@dataclass
+class Instruction:
+    opcode: int
+    arg1: int
+    arg2: int
+    out: int
+
+
+@dataclass
+class Sample:
+    before: T.Tuple[int, ...]
+    after: T.Tuple[int, ...]
+    instruction: Instruction
+
+
+def calc(
+    registers: T.List[int], opcode: Opcode, arg1: int, arg2: int, out: int
+) -> None:
+    registers[out] = {
+        Opcode.addr: lambda a, b: registers[a] + registers[b],
+        Opcode.addi: lambda a, b: registers[a] + b,
+        Opcode.mulr: lambda a, b: registers[a] * registers[b],
+        Opcode.muli: lambda a, b: registers[a] * b,
+        Opcode.banr: lambda a, b: registers[a] & registers[b],
+        Opcode.bani: lambda a, b: registers[a] & b,
+        Opcode.borr: lambda a, b: registers[a] | registers[b],
+        Opcode.bori: lambda a, b: registers[a] | b,
+        Opcode.setr: lambda a, _: registers[a],
+        Opcode.seti: lambda a, _: a,
+        Opcode.gtir: lambda a, b: int(a > registers[b]),
+        Opcode.gtri: lambda a, b: int(registers[a] > b),
+        Opcode.gtrr: lambda a, b: int(registers[a] > registers[b]),
+        Opcode.eqir: lambda a, b: int(a == registers[b]),
+        Opcode.eqri: lambda a, b: int(registers[a] == b),
+        Opcode.eqrr: lambda a, b: int(registers[a] == registers[b]),
+    }[opcode](arg1, arg2)
+
+
+def find_matching_opcodes(sample: Sample) -> T.Iterable[Opcode]:
+    for opcode in Opcode:
+        registers = copy(sample.before)
+        calc(
+            registers,
+            opcode,
+            sample.instruction.arg1,
+            sample.instruction.arg2,
+            sample.instruction.out,
+        )
+        if registers == sample.after:
+            yield opcode
+
+def part1(samples: T.List[Sample]) -> int:
+    total = 0
+    for sample in samples:
+        opcodes = list(find_matching_opcodes(sample))
+        if len(opcodes) >= 3:
+            total += 1
+    return total
+
+
+def get_numbers(text: str) -> T.List[int]:
+    return list(map(int, re.findall(r"-?\d+", text)))
+
+
+def parse_instruction(text: str) -> Instruction:
+    numbers = get_numbers(text)
+    return Instruction(
+        opcode=numbers[0], arg1=numbers[1], arg2=numbers[2], out=numbers[3]
+    )
+
+
+def parse_input_file(
+    text: str
+) -> T.Tuple[T.List[Sample], T.List[Instruction]]:
+    samples: T.List[Sample] = []
+    instructions: T.List[Instruction] = []
+
+    for chunk in text.split("\n\n\n")[0].split("\n\n"):
+        lines = chunk.split("\n")
+        before = get_numbers(lines[0])
+        after = get_numbers(lines[2])
+        instruction = parse_instruction(lines[1])
+
+        samples.append(
+            Sample(before=before, after=after, instruction=instruction)
+        )
+
+    for line in text.split("\n\n\n")[1].split("\n"):
+        if line:
+            instruction = parse_instruction(line)
+            instructions.append(instruction)
+
+    return samples, instructions
+
+
+def main() -> None:
+    text = Path(__file__).with_name("input.txt").read_text()
+    #text = "Before: [3, 2, 1, 1]\n9 2 1 2\nAfter:  [3, 2, 2, 1]\n\n\n\n"
+    samples, instructions = parse_input_file(text)
+
+    print(part1(samples))
+
+
+if __name__ == "__main__":
+    main()
