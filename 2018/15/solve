@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+import itertools
+import math
+import sys
+import typing as T
+from copy import deepcopy
+from dataclasses import dataclass
+from pathlib import Path
+
+CELL_GOBLIN = "G"
+CELL_ELF = "E"
+CELL_FLOOR = "."
+CELL_WALL = "#"
+CELL_UNKNOWN = "?"
+
+
+@dataclass
+class Point:
+    x: int
+    y: int
+
+    def __hash__(self) -> int:
+        return hash((self.x, self.y))
+
+    def __repr__(self) -> str:
+        return f"({self.x},{self.y})"
+
+
+@dataclass
+class Critter(Point):
+    num: int
+    name: str
+    grid: "Grid"
+    hp = 200
+    attack = 3
+    dead: bool = False
+
+    def move(self, x: int, y: int) -> None:
+        self.grid.cells[self.x, self.y] = CELL_FLOOR
+        self.x = x
+        self.y = y
+        self.grid.cells[self.x, self.y] = self.name
+
+    def die(self) -> None:
+        self.grid.cells[self.x, self.y] = CELL_FLOOR
+        self.dead = True
+
+
+class Grid:
+    def __init__(self, text: str) -> None:
+        lines = text.rstrip("\n").split("\n")
+        self.h = len(lines)
+        self.w = max(map(len, lines))
+        self.cells: T.Dict[T.Tuple[int, int], str] = {}
+        self.critters: T.List[Critter] = []
+
+        for y, x in itertools.product(range(self.h), range(self.w)):
+            self.cells[x, y] = cell = lines[y][x]
+            if cell in {CELL_ELF, CELL_GOBLIN}:
+                self.critters.append(
+                    Critter(
+                        num=len(self.critters), name=cell, x=x, y=y, grid=self
+                    )
+                )
+
+    def __str__(self) -> str:
+        return "\n".join(
+            "".join(self.cells[x, y] for x in range(self.w))
+            for y in range(self.h)
+        ).rstrip()
+
+    def turn(self) -> bool:
+        for critter in sorted(self.critters, key=lambda c: (c.y, c.x)):
+            if critter.dead:
+                continue
+
+            close_targets = list(self.get_close_critter_targets(critter))
+            if not close_targets:
+                all_targets = list(self.get_critter_targets(critter))
+                point = self.calc_critter_move(critter, all_targets)
+                if point:
+                    critter.move(point.x, point.y)
+                close_targets = list(self.get_close_critter_targets(critter))
+
+            if close_targets:
+                self.attack_critter(critter, close_targets)
+                if all(
+                    not list(self.get_critter_targets(critter))
+                    for critter in self.critters
+                ):
+                    return False
+
+        return True
+
+    def get_close_critter_targets(
+        self, critter: Critter
+    ) -> T.Iterable[Critter]:
+        for target in self.get_critter_targets(critter):
+            if any(
+                (target.x, target.y) == (critter.x + dx, critter.y + dy)
+                for dx, dy in [(0, -1), (-1, 0), (1, 0), (0, 1)]
+            ):
+                yield target
+
+    def get_critter_targets(self, critter: Critter) -> T.Iterable[Critter]:
+        if critter.dead:
+            return
+        for target in sorted(self.critters, key=lambda c: (c.hp, c.y, c.x)):
+            if not target.dead and target.name != critter.name:
+                yield target
+
+    def attack_critter(
+        self, critter: Critter, victims: T.List[Critter]
+    ) -> None:
+        if not victims:
+            return
+        victim = victims.pop(0)
+        victim.hp -= critter.attack
+        if victim.hp <= 0:
+            victim.die()
+
+    def calc_critter_move(
+        self, critter: Critter, targets: T.Iterable[Critter]
+    ) -> T.Optional[Point]:
+        ends = T.cast(
+            T.List[Point],
+            sum(
+                list(list(self.get_neighbours(target)) for target in targets),
+                [],
+            ),
+        )
+
+        best_path_size = math.inf
+        best_paths: T.List[T.Tuple[Point, Point, int]] = []
+        for start in self.get_neighbours(critter):
+            queue = [(Point(start.x, start.y), 0)]
+            visited = set([queue[0][0]])
+
+            while queue:
+                point, path_size = queue.pop(0)
+                if path_size > best_path_size:
+                    continue
+
+                if point in ends:
+                    best_paths.append((start, point, path_size))
+                    best_path_size = path_size
+
+                for neighbour in self.get_neighbours(point):
+                    if neighbour not in visited:
+                        visited.add(neighbour)
+                        queue.append((neighbour, path_size + 1))
+
+        shortest_paths = [
+            (start, end)
+            for start, end, path_size in best_paths
+            if path_size == best_path_size
+        ]
+
+        for start, end in sorted(
+            shortest_paths,
+            key=lambda item: (item[1].y, item[1].x, item[0].y, item[0].x),
+        ):
+            return start
+
+        return None
+
+    def get_neighbours(self, point: Point) -> T.Iterable[Point]:
+        for dx, dy in [(0, -1), (-1, 0), (1, 0), (0, 1)]:
+            if (
+                self.cells.get((point.x + dx, point.y + dy), CELL_UNKNOWN)
+                == CELL_FLOOR
+            ):
+                yield Point(point.x + dx, point.y + dy)
+
+
+def part1(grid: Grid) -> int:
+    grid = deepcopy(grid)
+    print(grid, end="\n\n", file=sys.stderr)
+    turn = 1
+    while True:
+        result = grid.turn()
+        print(f"Turn #{turn}", file=sys.stderr)
+        print(grid, file=sys.stderr)
+        print(file=sys.stderr)
+        if result:
+            turn += 1
+        else:
+            break
+
+    return (turn - 1) * sum(
+        critter.hp for critter in grid.critters if not critter.dead
+    )
+
+
+def main() -> None:
+    text = Path(__file__).with_name("input.txt").read_text()
+    grid = Grid(text)
+
+    print(part1(grid))
+
+
+if __name__ == "__main__":
+    main()
