@@ -13,6 +13,8 @@ CELL_FLOOR = "."
 CELL_WALL = "#"
 CELL_UNKNOWN = "?"
 
+MAX_HP = 200
+
 
 @dataclass
 class Point:
@@ -31,7 +33,7 @@ class Critter(Point):
     num: int
     name: str
     grid: "Grid"
-    hp = 200
+    hp = MAX_HP
     attack = 3
     dead: bool = False
 
@@ -85,8 +87,8 @@ class Grid:
             if close_targets:
                 self.attack_critter(critter, close_targets)
                 if all(
-                    not list(self.get_critter_targets(critter))
-                    for critter in self.critters
+                    not list(self.get_critter_targets(c))
+                    for c in self.critters
                 ):
                     return False
 
@@ -173,6 +175,10 @@ class Grid:
                 yield Point(point.x + dx, point.y + dy)
 
 
+def get_critter_count(grid: Grid, name: str) -> int:
+    return sum(1 for c in grid.critters if not c.dead and c.name == name)
+
+
 def part1(grid: Grid) -> int:
     grid = deepcopy(grid)
     print(grid, end="\n\n", file=sys.stderr)
@@ -187,9 +193,39 @@ def part1(grid: Grid) -> int:
         else:
             break
 
-    return (turn - 1) * sum(
-        critter.hp for critter in grid.critters if not critter.dead
-    )
+    return (turn - 1) * sum(c.hp for c in grid.critters if not c.dead)
+
+
+def part2(grid: Grid) -> int:
+    base_grid = grid
+    target_elf_count = get_critter_count(base_grid, CELL_ELF)
+
+    for power in range(1, MAX_HP + 1):
+        grid = deepcopy(base_grid)
+        for critter in grid.critters:
+            if critter.name == CELL_ELF:
+                critter.attack = power
+
+        print(f"Power: {power}\n", file=sys.stderr)
+        print(grid, end="\n\n", file=sys.stderr)
+        turn = 1
+        while True:
+            result = grid.turn()
+            print(f"Turn #{turn}", file=sys.stderr)
+            print(grid, file=sys.stderr)
+            print(file=sys.stderr)
+            if result:
+                turn += 1
+            else:
+                break
+
+        elf_count = get_critter_count(grid, CELL_ELF)
+        if elf_count < target_elf_count:
+            continue
+
+        return (turn - 1) * sum(c.hp for c in grid.critters if not c.dead)
+
+    return -1
 
 
 def main() -> None:
@@ -197,6 +233,7 @@ def main() -> None:
     grid = Grid(text)
 
     print(part1(grid))
+    print(part2(grid))
 
 
 if __name__ == "__main__":
