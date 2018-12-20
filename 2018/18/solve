@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import itertools
 import typing as T
+from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
@@ -53,6 +54,9 @@ class World:
 
         self.cells = new_cells
 
+    def __hash__(self) -> int:
+        return hash("".join(self.cells.flatten()))
+
     def save_image(self, path: Path) -> None:
         img = Image.new("RGB", (self.w, self.h), "black")
         pixels = img.load()
@@ -67,10 +71,35 @@ class World:
 
 
 def part1(world: World) -> int:
+    world = deepcopy(world)
     world.save_image(Path(__file__).with_name("part1-0000.png"))
     for turn in range(1, 11):
         world.turn()
         world.save_image(Path(__file__).with_name(f"part1-{turn:04d}.png"))
+
+    cells = list(world.cells.flatten())
+    return cells.count(LUMBER) * cells.count(TREE)
+
+
+def part2(world: World) -> int:
+    world = deepcopy(world)
+    world_hashes: T.List[int] = []
+    hash_idx: T.Optional[int] = None
+
+    goal = 1_000_000_000
+    turn = 0
+    while turn < goal:
+        world.turn()
+
+        hash_ = hash(world)
+        if hash_ in world_hashes:
+            hash_idx = world_hashes.index(hash_)
+            loop_size = turn - hash_idx
+            turns_left = goal - turn
+            turn += (turns_left // loop_size) * loop_size
+        else:
+            world_hashes.append(hash_)
+        turn += 1
 
     cells = list(world.cells.flatten())
     return cells.count(LUMBER) * cells.count(TREE)
@@ -81,6 +110,7 @@ def main() -> None:
     world = World(text)
 
     print(part1(world))
+    print(part2(world))
 
 
 if __name__ == "__main__":
