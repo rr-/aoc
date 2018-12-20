@@ -27,7 +27,7 @@ def parse_chunk(text: str) -> T.List[int]:
 
 class World:
     def __init__(self, text: str) -> None:
-        self._cells = defaultdict(lambda: AIR)
+        self.cells = defaultdict(lambda: AIR)
         for line in text.split("\n"):
             if not line:
                 continue
@@ -36,78 +36,62 @@ class World:
             ys = parse_chunk(chunk_y)
             for x in xs:
                 for y in ys:
-                    self._cells[x, y] = CLAY
+                    self.cells[x, y] = CLAY
 
-        self.x1 = min(key[0] for key in self._cells.keys()) - 1
-        self.x2 = max(key[0] for key in self._cells.keys()) + 1
-        self.y1 = min(key[1] for key in self._cells.keys())
-        self.y2 = max(key[1] for key in self._cells.keys())
+        self.x1 = min(key[0] for key in self.cells.keys()) - 1
+        self.x2 = max(key[0] for key in self.cells.keys()) + 1
+        self.y1 = min(key[1] for key in self.cells.keys())
+        self.y2 = max(key[1] for key in self.cells.keys())
         self.w = self.x2 + 1 - self.x1
         self.h = self.y2 + 1 - self.y1
-        self._cells[WELL_X, WELL_Y] = WELL
+        self.cells[WELL_X, WELL_Y] = WELL
 
-        self.scanline = WELL_Y
-
-    def __getitem__(self, pos: T.Tuple[int, int]) -> str:
-        return self._cells[pos]
-
-    def __setitem__(self, pos: T.Tuple[int, int], value: str) -> None:
-        x, y = pos
-        self._cells[pos] = value
+        self.heads: T.List[T.Tuple[int, int]] = [(WELL_X, WELL_Y)]
 
     def turn(self) -> bool:
-        y = self.scanline
-
-        ret = False
-        for x in range(self.x1, self.x2 + 1):
-            if self[x, y] == WELL:
-                self[x, y + 1] = RUNNING_WATER
-                self.scanline += 1
+        while self.heads:
+            x, y = self.heads.pop(0)
+            if self.cells[x, y] == WELL:
+                self.cells[x, y + 1] = RUNNING_WATER
+                self.heads.append((x, y + 1))
                 return True
 
-            if self[x, y] != RUNNING_WATER:
+            if self.cells[x, y] != RUNNING_WATER:
                 continue
 
-            if self[x, y + 1] != AIR and self[x, y + 1] in {STILL_WATER, CLAY}:
-                if self[x - 1, y] == AIR:
-                    self[x - 1, y] = RUNNING_WATER
+            if self.cells[x, y + 1] == AIR:
+                self.cells[x, y + 1] = RUNNING_WATER
+                if y + 1 < self.y2:
+                    self.heads.append((x, y + 1))
+                return True
+
+            if self.cells[x, y + 1] in {STILL_WATER, CLAY}:
+                ret = False
+                if self.cells[x - 1, y] == AIR:
+                    self.cells[x - 1, y] = RUNNING_WATER
+                    self.heads.append((x - 1, y))
                     ret = True
-                if self[x + 1, y] == AIR:
-                    self[x + 1, y] = RUNNING_WATER
+                if self.cells[x + 1, y] == AIR:
+                    self.cells[x + 1, y] = RUNNING_WATER
+                    self.heads.append((x + 1, y))
                     ret = True
-        if ret:
-            return ret
+                if ret:
+                    return True
 
-        ret = False
-        for x in range(self.x1, self.x2 + 1):
-            if self[x, y] != RUNNING_WATER:
-                continue
-            if self[x, y + 1] == AIR:
-                continue
+            x1 = x2 = x
+            while self.cells[x1 - 1, y] == RUNNING_WATER:
+                x1 -= 1
+            while self.cells[x2 + 1, y] == RUNNING_WATER:
+                x2 += 1
 
-            if self[x - 1, y] == CLAY:
-                x2 = x
-                while self[x2 + 1, y] == RUNNING_WATER:
-                    x2 += 1
-                if self[x2 + 1, y] == CLAY:
-                    for x in range(x, x2 + 1):
-                        self[x, y] = STILL_WATER
-                    ret = True
-        if ret:
-            self.scanline -= 1
-            return ret
+            if self.cells[x1 - 1, y] == CLAY and self.cells[x2 + 1, y] == CLAY:
+                for x in range(x1, x2 + 1):
+                    self.cells[x, y] = STILL_WATER
+                    if self.cells[x, y - 1] == RUNNING_WATER:
+                        self.heads.append((x, y - 1))
+                return True
 
-        ret = False
-        for x in range(self.x1, self.x2 + 1):
-            if self[x, y] != RUNNING_WATER:
-                continue
-            if self[x, y + 1] == AIR:
-                self[x, y + 1] = RUNNING_WATER
-                ret = True
-        self.scanline += 1
-        if self.scanline > self.y2:
-            return False
-        return ret
+        return False
 
     def save_image(self, path: Path) -> None:
         img = Image.new("RGB", (self.w, self.h), "black")
@@ -119,15 +103,15 @@ class World:
             WELL: (255, 255, 0),
             CLAY: (256, 200, 0),
         }
-        for x, y in self._cells.keys():
+        for x, y in self.cells.keys():
             if self.x1 <= x <= self.x2 and self.y1 <= y <= self.y2:
-                pixels[x - self.x1, y - self.y1] = colors[self[x, y]]
+                pixels[x - self.x1, y - self.y1] = colors[self.cells[x, y]]
         img.save(str(path), format="png")
 
 
 def part1(world: World) -> int:
     total = 0
-    for pos, cell in world._cells.items():
+    for pos, cell in world.cells.items():
         x, y = pos
         if y < world.y1 or y > world.y2:
             continue
@@ -138,7 +122,7 @@ def part1(world: World) -> int:
 
 def part2(world: World) -> int:
     total = 0
-    for pos, cell in world._cells.items():
+    for pos, cell in world.cells.items():
         x, y = pos
         if y < world.y1 or y > world.y2:
             continue
@@ -154,7 +138,7 @@ def main() -> None:
     while True:
         if not world.turn():
             break
-    world.save_image(Path(__file__).with_name(f"image.png"))
+    world.save_image(Path(__file__).with_name("image.png"))
 
     print(part1(world))
     print(part2(world))
