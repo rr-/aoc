@@ -2,7 +2,6 @@
 import re
 import typing as T
 from collections import defaultdict
-from copy import deepcopy
 from pathlib import Path
 
 from PIL import Image
@@ -127,14 +126,6 @@ class World:
 
 
 def part1(world: World) -> int:
-    world = deepcopy(world)
-
-    while True:
-        if not world.turn():
-            break
-
-    world.save_image(Path(__file__).with_name(f"part1.png"))
-
     total = 0
     for pos, cell in world._cells.items():
         x, y = pos
@@ -145,11 +136,28 @@ def part1(world: World) -> int:
     return total
 
 
+def part2(world: World) -> int:
+    total = 0
+    for pos, cell in world._cells.items():
+        x, y = pos
+        if y < world.y1 or y > world.y2:
+            continue
+        if cell == STILL_WATER:
+            total += 1
+    return total
+
+
 def main() -> None:
     text = Path(__file__).with_name("input.txt").read_text()
     world = World(text)
 
+    while True:
+        if not world.turn():
+            break
+    world.save_image(Path(__file__).with_name(f"image.png"))
+
     print(part1(world))
+    print(part2(world))
 
 
 if __name__ == "__main__":
