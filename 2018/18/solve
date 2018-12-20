@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+import itertools
+import typing as T
+from pathlib import Path
+
+import numpy as np
+from PIL import Image
+
+OPEN = "."
+TREE = "|"
+LUMBER = "#"
+NEIGHBOUR_DELTAS: T.List[T.Tuple[int, int]] = [
+    (x, y)
+    for x, y in itertools.product([-1, 0, 1], [-1, 0, 1])
+    if x != 0 or y != 0
+]
+
+
+class World:
+    def __init__(self, text: str) -> None:
+        lines = text.rstrip().split("\n")
+        self.w = len(lines)
+        self.h = max(map(len, lines))
+        self.cells = (
+            np.array(list(text.replace("\n", "")))
+            .reshape((self.h, self.w))
+            .transpose()
+        )
+
+    def turn(self) -> None:
+        new_cells = np.empty(shape=(self.h, self.w), dtype=self.cells.dtype)
+
+        for y, x in itertools.product(range(self.h), range(self.w)):
+            neighbours = [
+                self.cells[y + dy, x + dx]
+                for dy, dx in NEIGHBOUR_DELTAS
+                if 0 <= x + dx < self.w and 0 <= y + dy < self.h
+            ]
+            counts = {
+                cell: neighbours.count(cell) for cell in [OPEN, TREE, LUMBER]
+            }
+
+            if self.cells[y, x] == OPEN:
+                new_cells[y, x] = TREE if counts[TREE] >= 3 else OPEN
+            elif self.cells[y, x] == TREE:
+                new_cells[y, x] = LUMBER if counts[LUMBER] >= 3 else TREE
+            elif self.cells[y, x] == LUMBER:
+                new_cells[y, x] = (
+                    LUMBER
+                    if counts[LUMBER] >= 1 and counts[TREE] >= 1
+                    else OPEN
+                )
+
+        self.cells = new_cells
+
+    def save_image(self, path: Path) -> None:
+        img = Image.new("RGB", (self.w, self.h), "black")
+        pixels = img.load()
+        colors: T.Dict[str, T.Tuple[int, int, int]] = {
+            OPEN: (255, 255, 255),
+            TREE: (0, 200, 0),
+            LUMBER: (200, 150, 128),
+        }
+        for y, x in itertools.product(range(self.h), range(self.w)):
+            pixels[x, y] = colors[self.cells[x, y]]
+        img.save(str(path), format="png")
+
+
+def part1(world: World) -> int:
+    world.save_image(Path(__file__).with_name("part1-0000.png"))
+    for turn in range(1, 11):
+        world.turn()
+        world.save_image(Path(__file__).with_name(f"part1-{turn:04d}.png"))
+
+    cells = list(world.cells.flatten())
+    return cells.count(LUMBER) * cells.count(TREE)
+
+
+def main() -> None:
+    text = Path(__file__).with_name("input.txt").read_text()
+    world = World(text)
+
+    print(part1(world))
+
+
+if __name__ == "__main__":
+    main()
