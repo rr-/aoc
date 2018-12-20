@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+import typing as T
+from copy import copy
+from dataclasses import dataclass
+from pathlib import Path
+
+REGISTER_COUNT = 6
+
+
+@dataclass
+class Instruction:
+    opcode: str
+    arg1: int
+    arg2: int
+    out: int
+
+
+def calc(registers: T.List[int], instruction: Instruction) -> None:
+    opcode_func: T.Dict[str, T.Callable[[int, int], int]] = {
+        "addr": lambda a, b: registers[a] + registers[b],
+        "addi": lambda a, b: registers[a] + b,
+        "mulr": lambda a, b: registers[a] * registers[b],
+        "muli": lambda a, b: registers[a] * b,
+        "banr": lambda a, b: registers[a] & registers[b],
+        "bani": lambda a, b: registers[a] & b,
+        "borr": lambda a, b: registers[a] | registers[b],
+        "bori": lambda a, b: registers[a] | b,
+        "setr": lambda a, _: registers[a],
+        "seti": lambda a, _: a,
+        "gtir": lambda a, b: int(a > registers[b]),
+        "gtri": lambda a, b: int(registers[a] > b),
+        "gtrr": lambda a, b: int(registers[a] > registers[b]),
+        "eqir": lambda a, b: int(a == registers[b]),
+        "eqri": lambda a, b: int(registers[a] == b),
+        "eqrr": lambda a, b: int(registers[a] == registers[b]),
+    }
+    registers[instruction.out] = opcode_func[instruction.opcode](
+        instruction.arg1, instruction.arg2
+    )
+
+
+def part1(ip: int, instructions: T.List[Instruction]) -> int:
+    registers = [0] * REGISTER_COUNT
+    registers[ip] = 0
+    while 0 <= registers[ip] < len(instructions):
+        calc(registers, instructions[registers[ip]])
+        registers[ip] += 1
+    return registers[0]
+
+
+def parse_input_file(text: str) -> T.Tuple[int, T.List[Instruction]]:
+    lines = text.rstrip().split("\n")
+
+    ip = int(lines.pop(0).split()[1])
+    instructions: T.List[Instruction] = []
+
+    for line in lines:
+        words = line.split()
+        instructions.append(
+            Instruction(
+                opcode=words[0],
+                arg1=int(words[1]),
+                arg2=int(words[2]),
+                out=int(words[3]),
+            )
+        )
+
+    return ip, instructions
+
+
+def main() -> None:
+    text = Path(__file__).with_name("input.txt").read_text()
+    ip, instructions = parse_input_file(text)
+
+    print(part1(ip, instructions))
+
+
+if __name__ == "__main__":
+    main()
