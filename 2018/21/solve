@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import sys
 import tempfile
 import typing as T
-from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
 from subprocess import run
@@ -18,117 +18,105 @@ class Instruction:
     func: T.Callable[[T.List[int], int, int], int]
 
 
-def calc(reg: T.List[int], ip: int, instructions: T.List[Instruction]) -> None:
-    turn = 0
-    while 0 <= reg[ip] < len(instructions):
-        turn += 1
-        instr = instructions[reg[ip]]
-        if instr.opcode == 'eqrr':
-            print(
-                reg[ip], instr.opcode, instr.arg1, instr.arg2, instr.out, reg
-            )
-            break
-        reg[instr.out] = instr.func(reg, instr.arg1, instr.arg2)
-        reg[ip] += 1
-
-    # prog = "#include <stdio.h>\n"
-    # prog += "int main(void) {\n"
-    # prog += f"int reg[{REGISTER_COUNT}] = {{0}};\n"
-    # for i, val in enumerate(reg):
-    #     prog += f"reg[{i}] = {val};\n"
-    # prog += "long long int c = 0;"
-
-    # for i, instr in enumerate(instructions):
-    #     prog += f"LBL_{i}: "
-    #     out = instr.out
-    #     arg1 = instr.arg1
-    #     arg2 = instr.arg2
-
-    #     def get_reg(reg_num: int) -> str:
-    #         if reg_num == ip:
-    #             return str(i)
-    #         return f"reg[{reg_num}]"
-
-    #     # prog += f'printf("{i} {instr.opcode} {arg1} {arg2} {out} [%d %d %d %d %d]\\n", reg[0], reg[1], reg[2], reg[3], reg[4], reg[5]); '
-    #     #prog += 'if (++c % 1000000000 == 0) { printf("%lld\\n", c); } '
-    #     if out == ip:
-    #         if instr.opcode == "seti":
-    #             prog += f"goto LBL_{arg1 + 1};"
-    #         elif instr.opcode == "addr":
-    #             other_arg = arg1 if arg2 == ip else arg2
-    #             target_label = f"LBL_{i + 2}"
-    #             if i + 2 >= len(instructions):
-    #                 target_label = "LBL_DONE"
-    #             prog += f"if (reg[{other_arg}] == 1) {{ goto {target_label}; }} "
-    #             prog += f"else if (reg[{other_arg}] != 0) {{ return 1; }}"
-    #         elif instr.opcode == "addi":
-    #             assert arg1 == ip
-    #             prog += f"goto LBL_{i + arg2 + 1};"
-    #         elif instr.opcode == "mulr":
-    #             assert arg1 == ip
-    #             assert arg2 == ip
-    #             assert i * i >= len(instructions)
-    #             prog += "goto LBL_DONE;"
-    #     elif instr.opcode == "addr":
-    #         prog += f"reg[{out}] = {get_reg(arg1)} + {get_reg(arg2)};"
-    #     elif instr.opcode == "addi":
-    #         prog += f"reg[{out}] = {get_reg(arg1)} + {arg2};"
-    #     elif instr.opcode == "bani":
-    #         prog += f"reg[{out}] = {get_reg(arg1)} & {arg2};"
-    #     elif instr.opcode == "bori":
-    #         prog += f"reg[{out}] = {get_reg(arg1)} & {arg2};"
-    #     elif instr.opcode == "mulr":
-    #         prog += f"reg[{out}] = {get_reg(arg1)} * {get_reg(arg2)};"
-    #     elif instr.opcode == "muli":
-    #         prog += f"reg[{out}] = {get_reg(arg1)} * {arg2};"
-    #     elif instr.opcode == "eqrr":
-    #         prog += f"reg[{out}] = {get_reg(arg1)} == {get_reg(arg2)};"
-    #     elif instr.opcode == "eqri":
-    #         prog += f"reg[{out}] = {get_reg(arg1)} == {arg2};"
-    #     elif instr.opcode == "gtrr":
-    #         prog += f"reg[{out}] = {get_reg(arg1)} > {get_reg(arg2)};"
-    #     elif instr.opcode == "gtir":
-    #         prog += f"reg[{out}] = {arg1} > {get_reg(arg2)};"
-    #     elif instr.opcode == "setr":
-    #         prog += f"reg[{out}] = {get_reg(arg1)};"
-    #     elif instr.opcode == "seti":
-    #         prog += f"reg[{out}] = {arg1};"
-    #     else:
-    #         raise NotImplementedError(f"not implemented: {instr.opcode}")
-
-    #     prog += f" // {instr.opcode} {arg1} {arg2} {out}\n"
-
-    # prog += "LBL_DONE: "
-    # prog += f"for (int i = 0; i < {REGISTER_COUNT}; i++) {{ "
-    # prog += 'printf("%d ", reg[i]);'
-    # prog += "}\n"
-    # prog += "return 0; }"
-    # print(prog)
-
-    # with tempfile.TemporaryDirectory() as tmp_dir:
-    #     prog_src_file = Path(tmp_dir) / "test.cc"
-    #     prog_file = Path(tmp_dir) / "prog"
-    #     prog_src_file.write_text(prog)
-    #     run(["gcc", "-O3", "-masm=intel", "-S", "-o", "-", prog_src_file], check=True)
-    #     run(["gcc", "-O3", "-o", prog_file, prog_src_file], check=True)
-    #     result = run([prog_file], capture_output=True, text=True, check=True)
-    #     print(result.stdout)
-    #     reg.clear()
-    #     reg += list(map(int, result.stdout.split()))
-
-
 def part1(ip: int, instructions: T.List[Instruction]) -> int:
     reg = [0] * REGISTER_COUNT
-    reg[0] = 0
 
     while 0 <= reg[ip] < len(instructions):
         instr = instructions[reg[ip]]
-        if instr.opcode == 'eqrr':
+        if instr.opcode == "eqrr":
             break
         reg[instr.out] = instr.func(reg, instr.arg1, instr.arg2)
         reg[ip] += 1
 
     return reg[list(sorted([instr.arg1, instr.arg2]))[1]]
+
+
+def part2(ip: int, instructions: T.List[Instruction]) -> int:
+    reg = [0] * REGISTER_COUNT
+
+    prog = "#include <cstdio>\n"
+    prog = "#include <unordered_set>\n"
+    prog += "int main(void) {\n"
+    for i, val in enumerate(reg):
+        prog += f"int reg{i} = {val};\n"
+    prog += "int last = -1;\n"
+    prog += "std::unordered_set<long> numbers;\n"
+
+    for i, instr in enumerate(instructions):
+        prog += f"LBL_{i}: "
+        out = instr.out
+        arg1 = instr.arg1
+        arg2 = instr.arg2
+
+        def get_reg(reg_num: int) -> str:
+            if reg_num == ip:
+                return str(i)
+            return f"reg{reg_num}"
+
+        # prog += f'printf("{i} {instr.opcode} {arg1} {arg2} {out} [%d %d %d %d %d]\\n", reg[0], reg[1], reg[2], reg[3], reg[4], reg[5]); '
+        # prog += 'if (++c % 1000000000 == 0) { printf("%lld\\n", c); } '
+        if out == ip:
+            if instr.opcode == "seti":
+                prog += f"goto LBL_{arg1 + 1};"
+            elif instr.opcode == "addr":
+                other_arg = arg1 if arg2 == ip else arg2
+                target_label = f"LBL_{i + 2}"
+                if i + 2 >= len(instructions):
+                    target_label = "LBL_DONE"
+                prog += f"if (reg{other_arg} == 1) {{ goto {target_label}; }} "
+                prog += f"else if (reg{other_arg} != 0) {{ return 1; }}"
+            elif instr.opcode == "addi":
+                assert arg1 == ip
+                prog += f"goto LBL_{i + arg2 + 1};"
+            elif instr.opcode == "mulr":
+                assert arg1 == ip
+                assert arg2 == ip
+                assert i * i >= len(instructions)
+                prog += "goto LBL_DONE;"
+        elif instr.opcode == "addr":
+            prog += f"reg{out} = {get_reg(arg1)} + {get_reg(arg2)};"
+        elif instr.opcode == "addi":
+            prog += f"reg{out} = {get_reg(arg1)} + {arg2};"
+        elif instr.opcode == "bani":
+            prog += f"reg{out} = {get_reg(arg1)} & {arg2};"
+        elif instr.opcode == "bori":
+            prog += f"reg{out} = {get_reg(arg1)} | {arg2};"
+        elif instr.opcode == "mulr":
+            prog += f"reg{out} = {get_reg(arg1)} * {get_reg(arg2)};"
+        elif instr.opcode == "muli":
+            prog += f"reg{out} = {get_reg(arg1)} * {arg2};"
+        elif instr.opcode == "eqrr":
+            prog += f"if (numbers.find({get_reg(arg1)}) != numbers.end()) goto LBL_DONE; "
+            prog += f"numbers.insert({get_reg(arg1)});"
+            prog += f"last = {get_reg(arg1)};"
+            prog += f"reg{out} = {get_reg(arg1)} == {get_reg(arg2)};"
+        elif instr.opcode == "eqri":
+            prog += f"reg{out} = {get_reg(arg1)} == {arg2};"
+        elif instr.opcode == "gtrr":
+            prog += f"reg{out} = {get_reg(arg1)} > {get_reg(arg2)};"
+        elif instr.opcode == "gtir":
+            prog += f"reg{out} = {arg1} > {get_reg(arg2)};"
+        elif instr.opcode == "setr":
+            prog += f"reg{out} = {get_reg(arg1)};"
+        elif instr.opcode == "seti":
+            prog += f"reg{out} = {arg1};"
+        else:
+            raise NotImplementedError(f"not implemented: {instr.opcode}")
+
+        prog += f" // {instr.opcode} {arg1} {arg2} {out}\n"
+
+    prog += "LBL_DONE:\n"
+    prog += f'printf("%d ", last);\n'
+    prog += "return 0; }"
+    print(prog, file=sys.stderr)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        prog_src_file = Path(tmp_dir) / "test.cc"
+        prog_src_file.write_text(prog)
+        prog_file = Path(tmp_dir) / "prog"
+        run(["g++", "-O1", "-o", prog_file, prog_src_file], check=True)
+        result = run([prog_file], check=True, capture_output=True, text=True)
+        return int(result.stdout)
 
 
 def parse_input_file(text: str) -> T.Tuple[int, T.List[Instruction]]:
@@ -179,6 +167,7 @@ def main() -> None:
     ip, instructions = parse_input_file(text)
 
     print(part1(ip, instructions))
+    print(part2(ip, instructions))
 
 
 if __name__ == "__main__":
