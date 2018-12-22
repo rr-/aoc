@@ -26,13 +26,14 @@ def add_edge(
     )
 
 
-def part1(text: str) -> None:
+def get_distances(text: str) -> T.List[int]:
     text = text.strip().lstrip("^").rstrip("$")
     start = (0, 0)
     positions = set([start])
-    starts, ends = set(positions), set()
+    starts = set(positions)
+    ends: T.Set[T.Tuple[int, int]] = set()
     stack = []
-    distances = {}
+    distances: T.Dict[T.Tuple[int, int], int] = {}
 
     for t in text:
         if t in "NEWS":
@@ -51,13 +52,23 @@ def part1(text: str) -> None:
         else:
             raise NotImplementedError(f"not implemented: {t}")
 
-    return max(distances.values())
+    return list(distances.values())
+
+
+def part1(distances: T.List[int]) -> int:
+    return max(distances)
+
+
+def part2(distances: T.List[int]) -> int:
+    return len([path for path in distances if path >= 1000])
 
 
 def main() -> None:
     text = Path(__file__).with_name("input.txt").read_text()
+    distances = get_distances(text)
 
-    print(part1(text))
+    print(part1(distances))
+    print(part2(distances))
 
 
 if __name__ == "__main__":
