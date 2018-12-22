@@ -1,32 +1,127 @@
 #!/usr/bin/env python3
+import heapq
+import math
 import re
-import sys
 import typing as T
+from collections import defaultdict
 from pathlib import Path
 
+DELTAS = [1j, 1, -1, -1j]
 
-def part1(depth: int, target: T.Tuple[int, int]) -> int:
-    grid: T.Dict[T.Tuple[int, int], int] = {}
-    for y in range(target[1] + 1):
-        for x in range(target[0] + 1):
-            if y == 0:
-                grid[x, y] = ((16807 * x) + depth) % 20183
-            elif x == 0:
-                grid[x, y] = ((48271 * y) + depth) % 20183
+BEDROCK = -1
+ROCKY = 0
+WET = 1
+NARROW = 2
+
+TORCH = 0
+CLIMBING_GEAR = 1
+NEITHER = 2
+
+ITEM_RULES: T.Dict[int, T.Set[int]] = {
+    BEDROCK: set(),
+    ROCKY: {TORCH, CLIMBING_GEAR},
+    WET: {NEITHER, CLIMBING_GEAR},
+    NARROW: {NEITHER, TORCH},
+}
+
+
+class Cave:
+    def __init__(self, depth: int, target: complex) -> None:
+        self.depth = depth
+        self.target = target
+
+        self.erosion_level: T.Dict[complex, int] = {}
+        self.region_type: T.Dict[complex, int] = {
+            pos: l % 3 for pos, l in self.erosion_level.items()
+        }
+
+    def get_erosion_level(self, pos: complex) -> int:
+        ret = self.erosion_level.get(pos, None)
+        if ret is None:
+            assert pos.real >= 0 and pos.imag >= 0
+            if pos == self.target:
+                geo = 0
+            elif pos.imag == 0:
+                geo = 16807 * int(pos.real)
+            elif pos.real == 0:
+                geo = 48271 * int(pos.imag)
             else:
-                grid[x, y] = (
-                    (grid[x - 1, y] * grid[x, y - 1]) + depth
-                ) % 20183
-    grid[target] = depth % 20183
-    grid[0, 0] = depth % 20183
-    return sum([x % 3 for x in grid.values()])
+                geo = self.get_erosion_level(pos - 1) * self.get_erosion_level(
+                    pos - 1j
+                )
+            ret = (geo + self.depth) % 20183
+            self.erosion_level[pos] = ret
+        return ret
+
+    def get_region_type(self, pos: complex) -> int:
+        if not pos in self.region_type:
+            if pos.imag < 0 or pos.real < 0:
+                self.region_type[pos] = BEDROCK
+            else:
+                self.region_type[pos] = self.get_erosion_level(pos) % 3
+        return self.region_type[pos]
+
+
+def part1(cave: Cave) -> int:
+    return sum(
+        [
+            cave.get_region_type(x + y * 1j)
+            for y in range(int(cave.target.imag + 1))
+            for x in range(int(cave.target.real + 1))
+        ]
+    )
+
+
+def part2(cave: Cave) -> int:
+    best_cost = math.inf
+
+    queue: T.List[T.Tuple[int, int, int, int]] = [(0, 0, 0, TORCH)]
+    visited: T.Dict[T.Tuple[complex, int], float] = defaultdict(
+        lambda: math.inf
+    )
+
+    while queue:
+        cur_cost, cur_x, cur_y, cur_item = heapq.heappop(queue)
+        cur_pos = cur_x + cur_y * 1j
+
+        if cur_cost >= best_cost or cur_cost >= visited[cur_pos, cur_item]:
+            continue
+        visited[cur_pos, cur_item] = cur_cost
+
+        if cur_pos == cave.target:
+            return cur_cost
+
+        for delta in DELTAS:
+            new_pos = cur_pos + delta
+            allowed_items = (
+                ITEM_RULES[cave.get_region_type(new_pos)]
+                & ITEM_RULES[cave.get_region_type(cur_pos)]
+            )
+            if new_pos == cave.target:
+                allowed_items = {TORCH}
+
+            for new_item in allowed_items:
+                local_cost = 1 if cur_item == new_item else 8
+                heapq.heappush(
+                    queue,
+                    (
+                        cur_cost + local_cost,
+                        int(new_pos.real),
+                        int(new_pos.imag),
+                        new_item,
+                    ),
+                )
+
+    return -1
 
 
 def main() -> None:
     text = Path(__file__).with_name("input.txt").read_text()
     depth, target_x, target_y = map(int, re.findall(r"\d+", text))
+    cave = Cave(depth, target_x + target_y * 1j)
 
-    print(part1(depth, (target_x, target_y)))
+    print(part1(cave))
+    print(part2(cave))
 
 
 if __name__ == "__main__":
