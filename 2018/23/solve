@@ -6,42 +6,107 @@ from pathlib import Path
 
 
 @dataclass
-class Nanobot:
+class Point:
     x: int
     y: int
     z: int
+
+    def __floordiv__(self, num: int) -> "Point":
+        return Point(self.x // num, self.y // num, self.z // num)
+
+    def __add__(self, num: int) -> "Point":
+        return Point(self.x + num, self.y + num, self.z + num)
+
+    def __sub__(self, num: int) -> "Point":
+        return Point(self.x - num, self.y - num, self.z - num)
+
+    def __mul__(self, num: int) -> "Point":
+        return Point(self.x * num, self.y * num, self.z * num)
+
+    def __gt__(self, other: "Point") -> bool:
+        return (self.x, self.y, self.z) > (other.x, other.y, other.z)
+
+    def distance(self, other: "Point") -> int:
+        return (
+            abs(self.x - other.x)
+            + abs(self.y - other.y)
+            + abs(self.z - other.z)
+        )
+
+
+@dataclass
+class Bot:
+    num: int
+    pos: Point
     radius: int
 
-
-def coverage(origin: Nanobot, nanobots: T.List[Nanobot]) -> int:
-    total = 0
-    for other in nanobots:
-        distance = (
-            abs(other.x - origin.x)
-            + abs(other.y - origin.y)
-            + abs(other.z - origin.z)
-        )
-        if distance <= origin.radius:
-            total += 1
-    return total
+    def __floordiv__(self, num: int) -> "Bot":
+        return Bot(self.num, pos=self.pos // num, radius=self.radius // num)
 
 
-def part1(nanobots: T.List[Nanobot]) -> int:
-    strongest_radius = max(nanobots, key=lambda n: n.radius).radius
-    strongest = [
-        nanobot for nanobot in nanobots if nanobot.radius == strongest_radius
-    ]
-    return max(coverage(origin, nanobots) for origin in strongest)
+def get_coverage(origin: Bot, bots: T.List[Bot]) -> int:
+    return len(
+        [bot for bot in bots if origin.pos.distance(bot.pos) <= origin.radius]
+    )
+
+
+def get_coverage2(origin: Point, bots: T.List[Bot]) -> int:
+    return len([bot for bot in bots if origin.distance(bot.pos) <= bot.radius])
+
+
+def cube(pos1: Point, pos2: Point) -> T.Iterable[Point]:
+    for x in range(pos1.x, pos2.x + 1):
+        for y in range(pos1.y, pos2.y + 1):
+            for z in range(pos1.z, pos2.z + 1):
+                yield Point(x, y, z)
+
+
+def part1(bots: T.List[Bot]) -> int:
+    strongest_radius = max([bot.radius for bot in bots])
+    strongest = [bot for bot in bots if bot.radius == strongest_radius]
+    return max(get_coverage(strong, bots) for strong in strongest)
+
+
+def part2(bots: T.List[Bot]) -> int:
+    divisor = 2
+    start_mult = divisor ** 28
+
+    mult = start_mult
+    low = min(bot.pos // mult for bot in bots)
+    high = max(bot.pos // mult for bot in bots)
+
+    start = Point(0, 0, 0)
+    while mult:
+        best_pos = start
+        best_coverage = 0
+
+        mbots = [bot // mult for bot in bots]
+        for pos in cube(low, high):
+            coverage = get_coverage2(pos, mbots)
+            if coverage < best_coverage:
+                continue
+            if coverage == best_coverage:
+                if pos.distance(start) > best_pos.distance(start):
+                    continue
+            best_pos = pos
+            best_coverage = coverage
+
+        low = (best_pos - 1) * divisor
+        high = (best_pos + 1) * divisor
+        mult //= divisor
+
+    return best_pos.distance(start)
 
 
 def main() -> None:
     text = Path(__file__).with_name("input.txt").read_text()
-    nanobots = [
-        Nanobot(*map(int, re.findall("-?\d+", line)))
-        for line in text.strip().split("\n")
-    ]
+    bots = []
+    for i, line in enumerate(text.strip().split("\n")):
+        x, y, z, radius = map(int, re.findall("-?\d+", line))
+        bots.append(Bot(i, Point(x, y, z), radius))
 
-    print(part1(nanobots))
+    print(part1(bots))
+    print(part2(bots))
 
 
 if __name__ == "__main__":
