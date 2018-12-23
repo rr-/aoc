@@ -2,71 +2,60 @@
 import typing as T
 from pathlib import Path
 
-import numpy as np
 
-
-def to_bool(text: str) -> T.List[bool]:
-    return list(x == "#" for x in text)
-
-
-def rule_from_line(text: str) -> T.Tuple[T.Tuple[bool], bool]:
+def rule_from_line(text: str) -> T.Tuple[str, str]:
     source, target = text.split(" => ")
-    return (tuple(to_bool(source)), to_bool(target)[0])
+    return (source, target[0])
 
 
-def simulate(
-    initial: T.List[bool], rules: T.Dict[T.Tuple[bool], bool], generations: int
-) -> int:
+def simulate(initial: str, rules: T.Dict[str, str], generations: int) -> int:
     length = len(list(rules.keys())[0])
     neighbours = length // 2
 
-    rules = {tuple(map(int, key)): int(value) for key, value in rules.items()}
-    prev_state = [1 if x else 0 for x in initial]
-
+    prev_state = initial
     offset = 0
     for turn in range(generations):
         prev_offset = offset
-        prev_state = [0] * length + prev_state + [0] * length
-        new_state = [0] * len(prev_state)
+        prev_state = "." * length + prev_state + "." * length
+        new_state = "." * len(prev_state)
         offset += length
 
         for i in range(neighbours, len(prev_state) - neighbours - 1):
-            pattern = tuple(prev_state[i - neighbours : i + neighbours + 1])
-            new_state[i] = rules.get(pattern, 0)
+            pattern = prev_state[i - neighbours : i + neighbours + 1]
+            new_state = (
+                new_state[:i] + rules.get(pattern, ".") + new_state[i + 1 :]
+            )
 
-        new_state = np.trim_zeros(new_state, "f")
+        new_state = new_state.lstrip(".")
         offset += len(new_state) - len(prev_state)
-        new_state = np.trim_zeros(new_state, "b")
-        prev_state = np.trim_zeros(prev_state)
+        new_state = new_state.rstrip(".")
+        prev_state = prev_state.strip(".")
 
-        if np.array_equal(prev_state, new_state):
+        if prev_state == new_state:
             diff_offset = offset - prev_offset
             offset += diff_offset * (generations - turn - 1)
             break
 
         prev_state = new_state
 
-    return sum(i for i, x in enumerate(prev_state, -offset) if x)
+    return sum(i for i, x in enumerate(prev_state, -offset) if x == "#")
 
 
-def part1(
-    initial: T.Dict[int, bool], rules: T.Dict[T.Tuple[bool], bool]
-) -> int:
+def part1(initial: str, rules: T.Dict[str, str]) -> int:
     return simulate(initial, rules, 20)
 
 
-def part2(
-    initial: T.Dict[int, bool], rules: T.Dict[T.Tuple[bool], bool]
-) -> int:
+def part2(initial: str, rules: T.Dict[str, str]) -> int:
     return simulate(initial, rules, 50_000_000_000)
 
 
 def main() -> None:
-    with Path(__file__).with_name("input.txt").open() as handle:
-        lines = [line for line in map(str.strip, handle) if line]
-        initial = list(to_bool(lines[0].split(":")[1].strip()))
-        rules = dict(map(rule_from_line, lines[1:]))
+    text = Path(__file__).with_name("input.txt").read_text()
+    lines = [line for line in text.rstrip().split("\n") if line]
+    initial = lines[0].split(":")[1].strip()
+    rules = dict(map(rule_from_line, lines[1:]))
 
+    assert part1(initial, rules) == 2911
     print(part1(initial, rules))
     print(part2(initial, rules))
 

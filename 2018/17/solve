@@ -27,7 +27,7 @@ def parse_chunk(text: str) -> T.List[int]:
 
 class World:
     def __init__(self, text: str) -> None:
-        self.cells = defaultdict(lambda: AIR)
+        self.cells: T.Dict[T.Tuple[int, int], str] = defaultdict(lambda: AIR)
         for line in text.split("\n"):
             if not line:
                 continue
