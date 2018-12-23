@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+import re
+import typing as T
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Nanobot:
+    x: int
+    y: int
+    z: int
+    radius: int
+
+
+def coverage(origin: Nanobot, nanobots: T.List[Nanobot]) -> int:
+    total = 0
+    for other in nanobots:
+        distance = (
+            abs(other.x - origin.x)
+            + abs(other.y - origin.y)
+            + abs(other.z - origin.z)
+        )
+        if distance <= origin.radius:
+            total += 1
+    return total
+
+
+def part1(nanobots: T.List[Nanobot]) -> int:
+    strongest_radius = max(nanobots, key=lambda n: n.radius).radius
+    strongest = [
+        nanobot for nanobot in nanobots if nanobot.radius == strongest_radius
+    ]
+    return max(coverage(origin, nanobots) for origin in strongest)
+
+
+def main() -> None:
+    text = Path(__file__).with_name("input.txt").read_text()
+    nanobots = [
+        Nanobot(*map(int, re.findall("-?\d+", line)))
+        for line in text.strip().split("\n")
+    ]
+
+    print(part1(nanobots))
+
+
+if __name__ == "__main__":
+    main()
