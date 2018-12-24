@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import itertools
 import re
 import sys
 import typing as T
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,104 +24,86 @@ class Group:
     def effective_power(self) -> int:
         return self.unit_count * self.attack_value
 
+    def get_damage(self, enemy: "Group") -> int:
+        if self.attack_type in enemy.immunities:
+            return 0
+        if self.attack_type in enemy.weaknesses:
+            return self.effective_power * 2
+        return self.effective_power
 
-def get_damage(attacker: Group, victim: Group) -> int:
-    if attacker.attack_type in victim.immunities:
-        return 0
-    if attacker.attack_type in victim.weaknesses:
-        return attacker.effective_power * 2
-    return attacker.effective_power
 
-
-def round(groups: T.List[Group]) -> bool:
-    for group in groups:
-        print(group.name, "has", group.unit_count, "units", file=sys.stderr)
-    print(file=sys.stderr)
-
-    targets: T.Dict[str, T.Optional[Group]] = {}
-    targetted: T.List[str] = []
+def turn(groups: T.List[Group]) -> bool:
+    targets: T.Dict[str, Group] = {}
+    targetted: T.Set[str] = set()
     for attacker in sorted(
         groups,
         key=lambda group: (group.effective_power, group.initiative),
         reverse=True,
     ):
-        if attacker.unit_count <= 0:
-            continue
-
         enemies = [
             enemy
             for enemy in groups
             if enemy.tribe != attacker.tribe
-            and enemy.unit_count > 0
-            and get_damage(attacker, enemy) > 0
+            and attacker.get_damage(enemy) > 0
             and enemy.name not in targetted
         ]
         enemies.sort(
             key=lambda enemy: (
-                get_damage(attacker, enemy),
+                attacker.get_damage(enemy),
                 enemy.effective_power,
                 enemy.initiative,
             ),
             reverse=True,
         )
-        for enemy in enemies:
-            print(
-                attacker.name,
-                "would deal",
-                enemy.name,
-                get_damage(attacker, enemy),
-                "damage",
-                file=sys.stderr,
-            )
 
         enemy = next(iter(enemies), None)
         if enemy:
-            targetted.append(enemy.name)
-        targets[attacker.name] = enemy
-    print(file=sys.stderr)
+            targetted.add(enemy.name)
+            targets[attacker.name] = enemy
 
+    anything_killed = False
     for attacker in sorted(
         groups, key=lambda group: group.initiative, reverse=True
     ):
-        if attacker.unit_count <= 0:
-            continue
-
-        enemy = targets[attacker.name]
+        enemy = targets.get(attacker.name)
         if not enemy:
             continue
 
-        damage = get_damage(attacker, enemy)
+        damage = attacker.get_damage(enemy)
         kills = min(enemy.unit_count, damage // enemy.unit_health)
-        print(
-            attacker.name,
-            "attacks",
-            enemy.name,
-            "killing",
-            kills,
-            "units",
-            file=sys.stderr,
-        )
         enemy.unit_count -= kills
+        if enemy.unit_count <= 0:
+            groups.remove(enemy)
+        if kills:
+            anything_killed = True
 
-    print(file=sys.stderr)
-    print("---", file=sys.stderr)
+    if not anything_killed:
+        return False
 
     return all(
-        len(
-            [
-                group
-                for group in groups
-                if group.tribe == tribe and group.unit_count > 0
-            ]
-        )
+        len([group for group in groups if group.tribe == tribe])
         for tribe in [0, 1]
     )
 
 
 def part1(groups: T.List[Group]) -> int:
-    while round(groups):
+    groups = deepcopy(groups)
+    while turn(groups):
         pass
     return sum(group.unit_count for group in groups)
+
+
+def part2(groups: T.List[Group]) -> int:
+    for boost in itertools.count():
+        test_groups = deepcopy(groups)
+        for group in test_groups:
+            if group.tribe == 0:
+                group.attack_value += boost
+        while turn(test_groups):
+            pass
+        if all(group.tribe == 0 for group in test_groups):
+            return sum(group.unit_count for group in test_groups)
+    assert False
 
 
 def parse_input(text: str) -> T.Iterable[Group]:
@@ -157,8 +141,8 @@ def parse_input(text: str) -> T.Iterable[Group]:
 
             if match.group("attrs"):
                 for attr_txt in match.group("attrs").split("; "):
-                    attr_type, attr_values = attr_txt.split(" to ")
-                    attr_values = list(map(str.strip, attr_values.split(",")))
+                    attr_type, tmp = attr_txt.split(" to ")
+                    attr_values = list(map(str.strip, tmp.split(",")))
                     if attr_type == "weak":
                         group.weaknesses = attr_values
                     else:
@@ -172,6 +156,7 @@ def main() -> None:
     groups = list(parse_input(text))
 
     print(part1(groups))
+    print(part2(groups))
 
 
 if __name__ == "__main__":
