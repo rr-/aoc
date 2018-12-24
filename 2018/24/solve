@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+import re
+import sys
+import typing as T
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Group:
+    name: str
+    tribe: int
+    unit_count: int
+    unit_health: int
+    weaknesses: T.List[str]
+    immunities: T.List[str]
+    attack_type: str
+    attack_value: int
+    initiative: int
+
+    @property
+    def effective_power(self) -> int:
+        return self.unit_count * self.attack_value
+
+
+def get_damage(attacker: Group, victim: Group) -> int:
+    if attacker.attack_type in victim.immunities:
+        return 0
+    if attacker.attack_type in victim.weaknesses:
+        return attacker.effective_power * 2
+    return attacker.effective_power
+
+
+def round(groups: T.List[Group]) -> bool:
+    for group in groups:
+        print(group.name, "has", group.unit_count, "units", file=sys.stderr)
+    print(file=sys.stderr)
+
+    targets: T.Dict[str, T.Optional[Group]] = {}
+    targetted: T.List[str] = []
+    for attacker in sorted(
+        groups,
+        key=lambda group: (group.effective_power, group.initiative),
+        reverse=True,
+    ):
+        if attacker.unit_count <= 0:
+            continue
+
+        enemies = [
+            enemy
+            for enemy in groups
+            if enemy.tribe != attacker.tribe
+            and enemy.unit_count > 0
+            and get_damage(attacker, enemy) > 0
+            and enemy.name not in targetted
+        ]
+        enemies.sort(
+            key=lambda enemy: (
+                get_damage(attacker, enemy),
+                enemy.effective_power,
+                enemy.initiative,
+            ),
+            reverse=True,
+        )
+        for enemy in enemies:
+            print(
+                attacker.name,
+                "would deal",
+                enemy.name,
+                get_damage(attacker, enemy),
+                "damage",
+                file=sys.stderr,
+            )
+
+        enemy = next(iter(enemies), None)
+        if enemy:
+            targetted.append(enemy.name)
+        targets[attacker.name] = enemy
+    print(file=sys.stderr)
+
+    for attacker in sorted(
+        groups, key=lambda group: group.initiative, reverse=True
+    ):
+        if attacker.unit_count <= 0:
+            continue
+
+        enemy = targets[attacker.name]
+        if not enemy:
+            continue
+
+        damage = get_damage(attacker, enemy)
+        kills = min(enemy.unit_count, damage // enemy.unit_health)
+        print(
+            attacker.name,
+            "attacks",
+            enemy.name,
+            "killing",
+            kills,
+            "units",
+            file=sys.stderr,
+        )
+        enemy.unit_count -= kills
+
+    print(file=sys.stderr)
+    print("---", file=sys.stderr)
+
+    return all(
+        len(
+            [
+                group
+                for group in groups
+                if group.tribe == tribe and group.unit_count > 0
+            ]
+        )
+        for tribe in [0, 1]
+    )
+
+
+def part1(groups: T.List[Group]) -> int:
+    while round(groups):
+        pass
+    return sum(group.unit_count for group in groups)
+
+
+def parse_input(text: str) -> T.Iterable[Group]:
+    for tribe, chunk in enumerate(text.split("\n\n")):
+        lines = chunk.split("\n")
+        tribe_name = lines.pop(0).strip(":")
+
+        for i, line in enumerate(lines):
+            if not line:
+                continue
+
+            match = re.match(
+                r"^(?P<unit_count>\d+) units? each with "
+                r"(?P<unit_health>\d+) hit points "
+                r"(?:\((?P<attrs>[^\(\)]+)\) )?"
+                r"with an attack that does (?P<attack_value>\d+) "
+                r"(?P<attack_type>\w+) damage "
+                r"at initiative (?P<initiative>\d+)$",
+                line,
+            )
+
+            assert match, line
+
+            group = Group(
+                name=f"{tribe_name} group {i+1}",
+                tribe=tribe,
+                unit_count=int(match.group("unit_count")),
+                unit_health=int(match.group("unit_health")),
+                weaknesses=[],
+                immunities=[],
+                attack_type=match.group("attack_type"),
+                attack_value=int(match.group("attack_value")),
+                initiative=int(match.group("initiative")),
+            )
+
+            if match.group("attrs"):
+                for attr_txt in match.group("attrs").split("; "):
+                    attr_type, attr_values = attr_txt.split(" to ")
+                    attr_values = list(map(str.strip, attr_values.split(",")))
+                    if attr_type == "weak":
+                        group.weaknesses = attr_values
+                    else:
+                        group.immunities = attr_values
+
+            yield group
+
+
+def main() -> None:
+    text = Path(__file__).with_name("input.txt").read_text()
+    groups = list(parse_input(text))
+
+    print(part1(groups))
+
+
+if __name__ == "__main__":
+    main()
