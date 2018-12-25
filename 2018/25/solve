@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+import typing as T
+from pathlib import Path
+
+TPoint = T.Tuple[int, int, int, int]
+
+
+def distance(p1: TPoint, p2: TPoint) -> int:
+    return sum(abs(c1 - c2) for c1, c2 in zip(p1, p2))
+
+
+def part1(points: T.List[TPoint]) -> int:
+    points.sort()
+    bins = [[point] for point in points]
+
+    dist: T.Dict[T.Tuple[TPoint, TPoint], int] = {}
+    for i, p1 in enumerate(points):
+        for p2 in points[i + 1 :]:
+            dist[p1, p2] = dist[p2, p1] = distance(p1, p2)
+
+    while True:
+        found = False
+        for i, bin1 in enumerate(bins):
+            for bin2 in bins[i + 1 :]:
+                if any(dist[p1, p2] <= 3 for p1 in bin1 for p2 in bin2):
+                    bins.remove(bin2)
+                    bin1 += bin2
+                    found = True
+        if not found:
+            break
+
+    return len(bins)
+
+
+def main() -> None:
+    text = Path(__file__).with_name("input.txt").read_text()
+    points = list(
+        T.cast(TPoint, tuple(map(int, line.split(","))))
+        for line in text.strip().split("\n")
+    )
+
+    print(part1(points))
+
+
+if __name__ == "__main__":
+    main()
